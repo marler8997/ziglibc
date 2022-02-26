@@ -15,8 +15,12 @@
 #define SEEK_END 2
 
 typedef struct {
-  int fd;
   int errno;
+#ifdef _WIN32
+  void* fd;
+#else
+  int fd;
+#endif
 } FILE;
 
 typedef size_t fpos_t;

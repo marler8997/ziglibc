@@ -8,20 +8,31 @@ const c = @cImport({
 export var errno: c_int = 0;
 
 var stdin_storage: c.FILE = .{
-    .fd = std.os.STDIN_FILENO,
+    .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO,
     .errno = undefined,
 };
 var stdout_storage: c.FILE = .{
-    .fd = std.os.STDOUT_FILENO,
+    .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO,
     .errno = undefined,
 };
 var stderr_storage: c.FILE = .{
-    .fd = std.os.STDERR_FILENO,
+    .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO,
     .errno = undefined,
 };
-export var stdin: *c.FILE = &stdin_storage;
-export var stdout: *c.FILE = &stdout_storage;
-export var stderr: *c.FILE = &stderr_storage;
+export const stdin: *c.FILE = &stdin_storage;
+export const stdout: *c.FILE = &stdout_storage;
+export const stderr: *c.FILE = &stderr_storage;
+
+// __main appears to be a design inherited by LLVM from gcc.
+// it's typically provided by libgcc and is used to call constructors
+fn __main() callconv(.C) void {
+    stdin_storage.fd = std.os.windows.peb().ProcessParameters.hStdInput;
+    stdout_storage.fd = std.os.windows.peb().ProcessParameters.hStdOutput;
+    stderr_storage.fd = std.os.windows.peb().ProcessParameters.hStdError;
+
+    // TODO: call constructors
+}
+comptime { if (builtin.os.tag == .windows) @export(__main, .{ .name = "__main" }); }
 
 export fn abort() callconv(.C) noreturn {
     @panic("abort");
@@ -59,6 +70,9 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
 }
 
 export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
+    if (builtin.os.tag == .windows) {
+        @panic("fputc not implemented");
+    }
     const buf = [_]u8 { @intCast(u8, 0xff & character) };
     const written = std.os.system.write(stream.fd, &buf, 1);
     switch (std.os.errno(written)) {
@@ -74,8 +88,34 @@ export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     }
 }
 
+const windows = struct {
+    // always sets out_written, even if it returns an error
+    fn writeAll(hFile: std.os.windows.HANDLE, buffer: []const u8, out_written: *usize) error{WriteFailed}!void {
+        var written: usize = 0;
+        while (written < buffer.len) {
+            const next_write = std.math.cast(u32, buffer.len - written) catch std.math.maxInt(u32);
+            var last_written : u32 = undefined;
+            const result = std.os.windows.kernel32.WriteFile(hFile, buffer.ptr + written, next_write, &last_written, null);
+            written += last_written; // WriteFile always sets last_written to 0 before doing anything
+            if (result != 0) {
+                out_written.* = written;
+                return error.WriteFailed;
+            }
+        }
+        out_written.* = written;
+    }
+};
+
+
 // NOTE: this is not apart of libc
 export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
+    if (builtin.os.tag == .windows) {
+        var written: usize = undefined;
+        windows.writeAll(stream.fd.?, ptr[0 .. size], &written) catch {
+            stream.errno = @enumToInt(std.os.windows.kernel32.GetLastError());
+        };
+        return written;
+    }
     const written = std.os.system.write(stream.fd, ptr, size);
     switch (std.os.errno(written)) {
         .SUCCESS => {
@@ -106,6 +146,10 @@ export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
 }
 
 export fn puts(s: [*:0]const u8) callconv(.C) c_int {
+    return fputs(s, stdout);
+}
+
+export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
     // NOTE: this is inneficient
     //       Maybe I could do a writev?
     //       Or maybe I could make 2 write calls with a locking mechanism?
@@ -121,22 +165,6 @@ export fn puts(s: [*:0]const u8) callconv(.C) c_int {
     @memcpy(mem.ptr, s, len);
     mem[len] = '\n';
 
-    if (builtin.os.tag == .windows) {
-        @panic("not impl");
-        //std.os.windows.kernel32.WriteFile(
-        //    std.os.windows.peb().ProcessParameters.hStdOutput,
-        //    std.io.getStdOut().handle,
-        //    s,
-        //    std.mem.len(s),
-//
-        //return windows.WriteFile(fd, bytes, null, std.io.default_mode);
-    }
-
-    switch (std.os.errno(std.os.system.write(std.io.getStdOut().handle, mem.ptr, mem.len))) {
-        .SUCCESS => return 1,
-        else => |e| {
-            errno = @enumToInt(e);
-            return c.EOF;
-        },
-    }
+    const written = _fwrite_buf(mem.ptr, mem.len, stream);
+    return if (written == 0) c.EOF else 1;
 }

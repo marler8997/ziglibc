@@ -26,6 +26,11 @@ pub fn build(b: *std.build.Builder) void {
         exe.linkLibrary(zig_start);
         exe.setTarget(target);
         exe.setBuildMode(mode);
+        // TODO: should zig_libc and zig_start be able to add library dependencies?
+        if (target.getOs().tag == .windows) {
+            exe.linkSystemLibrary("ntdll");
+            exe.linkSystemLibrary("kernel32");
+        }
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Hello\n",
@@ -39,6 +44,11 @@ pub fn build(b: *std.build.Builder) void {
         exe.linkLibrary(zig_start);
         exe.setTarget(target);
         exe.setBuildMode(mode);
+        // TODO: should zig_libc and zig_start be able to add library dependencies?
+        if (target.getOs().tag == .windows) {
+            exe.linkSystemLibrary("ntdll");
+            exe.linkSystemLibrary("kernel32");
+        }
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
