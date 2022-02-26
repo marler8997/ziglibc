@@ -18,6 +18,10 @@ See https://en.wikipedia.org/wiki/ANSI_C
 * 2011: C11 ratified
 * 2018: C17
 
+### C89 (aka C90)
+
+https://port70.net/~nsz/c/c89/c89-draft.html
+
 ### C95
 
 * improved multi-byte and wide character support, introduces `<wchar.h>` and `<wctype.h>` and multi-byte IO
@@ -35,6 +39,8 @@ Preprocessor test for c95:
 ```
 
 ### C99
+
+https://port70.net/~nsz/c/c99/n1256.html
 
 * new builtin types `long long`, `_Bool`, `_Complex` and `_Imaginary`
 * static array indices

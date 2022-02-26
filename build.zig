@@ -1,6 +1,7 @@
 const std = @import("std");
 const GitRepoStep = @import("GitRepoStep.zig");
 const libcbuild = @import("ziglibcbuild.zig");
+const luabuild = @import("luabuild.zig");
 
 pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
@@ -40,7 +41,7 @@ pub fn build(b: *std.build.Builder) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&exe_tests.step);
 
-    _ = addLua(b, target, mode, zig_libc);
+    _ = addLua(b, target, mode, zig_libc, zig_start);
 }
 
 fn addLua(
@@ -48,6 +49,7 @@ fn addLua(
     target: anytype,
     mode: anytype,
     zig_libc: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
     const lua_repo = GitRepoStep.create(b, .{
         .url = "https://github.com/lua/lua",
@@ -59,13 +61,25 @@ fn addLua(
     lua_exe.setBuildMode(mode);
     lua_exe.step.dependOn(&lua_repo.step);
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
-    lua_exe.addCSourceFile(b.pathJoin(&.{lua_repo_path, "lua.c"}), &[_][]const u8 {
+    var files = std.ArrayList([]const u8).init(b.allocator);
+    files.append(b.pathJoin(&.{lua_repo_path, "lua.c"})) catch unreachable;
+    inline for (luabuild.core_objects) |obj| {
+        files.append(b.pathJoin(&.{lua_repo_path, obj ++ ".c"})) catch unreachable;
+    }
+    inline for (luabuild.aux_objects) |obj| {
+        files.append(b.pathJoin(&.{lua_repo_path, obj ++ ".c"})) catch unreachable;
+    }
+    inline for (luabuild.lib_objects) |obj| {
+        files.append(b.pathJoin(&.{lua_repo_path, obj ++ ".c"})) catch unreachable;
+    }
+
+    lua_exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
         "-std=c99",
     });
 
     lua_exe.addIncludePath("inc");
     lua_exe.linkLibrary(zig_libc);
-    //lua_exe.linkLibrary(zig_start);
+    lua_exe.linkLibrary(zig_start);
 
     const step = b.step("lua", "build the LUA interpreter");
     step.dependOn(&lua_exe.step);
