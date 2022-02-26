@@ -1,6 +1,10 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
+const c = @cImport({
+    @cInclude("../inc/stdio.h");
+});
+
 export var errno: c_int = 0;
 export var stdin: c.FILE = .{
     .fd = std.os.STDIN_FILENO,
@@ -15,13 +19,55 @@ export var stderr: c.FILE = .{
     .errno = undefined,
 };
 
+export fn strlen(s: [*:0]const u8) callconv(.C) usize {
+    return std.mem.len(s);
+}
 
-const c = @cImport({
-    @cInclude("../inc/stdio.h");
-});
+export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
+    var a_next = a;
+    var b_next = b;
+    while (a_next[0] == b_next[0] and a_next[0] != 0) {
+        a_next += 1;
+        b_next += 1;
+    }
+    return a_next[0] - b_next[0];
+}
+
+export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
+    var next = s;
+    while (true) : (next += 1) {
+        if (next[0] == char) return next;
+        if (next[0] == 0) return null;
+    }
+}
+
+// TODO: can name be null?
+// TODO: should we detect and do something different if there is a '=' in name?
+export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
+    _ = name;
+    return null; // not implemented
+    //const name_len = std.mem.len(name);
+    //var e: ?[*:0]u8 = environ;
+}
+
+export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
+    const buf = [_]u8 { @intCast(u8, 0xff & character) };
+    const written = std.os.system.write(stream.fd, &buf, 1);
+    switch (std.os.errno(written)) {
+        .SUCCESS => {
+            if (written == 1) return character;
+            stream.errno = @enumToInt(std.os.E.IO);
+            return c.EOF;
+        },
+        else => |e| {
+            stream.errno = @enumToInt(e);
+            return c.EOF;
+        },
+    }
+}
 
 // NOTE: this is not apart of libc
-export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) usize {
+export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
     const written = std.os.system.write(stream.fd, ptr, size);
     switch (std.os.errno(written)) {
         .SUCCESS => {
@@ -39,14 +85,14 @@ export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) usize {
 
 // TODO: can ptr be NULL?
 // TODO: can stream be NULL (I don't think it can)
-export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) usize {
+export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
     const total = size * nmemb;
     const result = _fwrite_buf(ptr, total, stream);
     if (result == total) return nmemb;
     return result / size;
 }
 
-export fn fflush(stream: ?*c.FILE) c_int {
+export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
     _ = stream;
     return 0; // no-op since there's no buffering right now
 }
