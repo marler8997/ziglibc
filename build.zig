@@ -26,10 +26,22 @@ pub fn build(b: *std.build.Builder) void {
         exe.linkLibrary(zig_start);
         exe.setTarget(target);
         exe.setBuildMode(mode);
-
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Hello\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
+    {
+        const exe = b.addExecutable("strings", "test" ++ std.fs.path.sep_str ++ "strings.c");
+        exe.addIncludePath("inc");
+        exe.linkLibrary(zig_libc);
+        exe.linkLibrary(zig_start);
+        exe.setTarget(target);
+        exe.setBuildMode(mode);
+        const run_step = exe.run();
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
         };
         test_step.dependOn(&run_step.step);
     }

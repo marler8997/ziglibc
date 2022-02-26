@@ -6,18 +6,26 @@ const c = @cImport({
 });
 
 export var errno: c_int = 0;
-export var stdin: c.FILE = .{
+
+var stdin_storage: c.FILE = .{
     .fd = std.os.STDIN_FILENO,
     .errno = undefined,
 };
-export var stdout: c.FILE = .{
+var stdout_storage: c.FILE = .{
     .fd = std.os.STDOUT_FILENO,
     .errno = undefined,
 };
-export var stderr: c.FILE = .{
+var stderr_storage: c.FILE = .{
     .fd = std.os.STDERR_FILENO,
     .errno = undefined,
 };
+export var stdin: *c.FILE = &stdin_storage;
+export var stdout: *c.FILE = &stdout_storage;
+export var stderr: *c.FILE = &stderr_storage;
+
+export fn abort() callconv(.C) noreturn {
+    @panic("abort");
+}
 
 export fn strlen(s: [*:0]const u8) callconv(.C) usize {
     return std.mem.len(s);

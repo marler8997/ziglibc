@@ -1,6 +1,10 @@
 #ifndef _ASSERT_H
 #define _ASSERT_H
 
-void assert(int expression);
+#ifdef NDEBUG
+    #define assert(ignore) ((void)0)
+#else
+    void assert(int expression);
+#endif
 
 #endif /* _ASSERT_H */
