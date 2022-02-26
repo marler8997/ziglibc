@@ -1,5 +1,5 @@
 const std = @import("std");
-
+const GitRepoStep = @import("GitRepoStep.zig");
 const libcbuild = @import("ziglibcbuild.zig");
 
 pub fn build(b: *std.build.Builder) void {
@@ -39,4 +39,36 @@ pub fn build(b: *std.build.Builder) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&exe_tests.step);
+
+    _ = addLua(b, target, mode, zig_libc);
+}
+
+fn addLua(
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    zig_libc: *std.build.LibExeObjStep,
+) *std.build.LibExeObjStep {
+    const lua_repo = GitRepoStep.create(b, .{
+        .url = "https://github.com/lua/lua",
+        .sha = "5d708c3f9cae12820e415d4f89c9eacbe2ab964b",
+        .branch = "v5.4.4",
+    });
+    const lua_exe = b.addExecutable("lua", null);
+    lua_exe.setTarget(target);
+    lua_exe.setBuildMode(mode);
+    lua_exe.step.dependOn(&lua_repo.step);
+    const lua_repo_path = lua_repo.getPath(&lua_exe.step);
+    lua_exe.addCSourceFile(b.pathJoin(&.{lua_repo_path, "lua.c"}), &[_][]const u8 {
+        "-std=c99",
+    });
+
+    lua_exe.addIncludePath("inc");
+    lua_exe.linkLibrary(zig_libc);
+    //lua_exe.linkLibrary(zig_start);
+
+    const step = b.step("lua", "build the LUA interpreter");
+    step.dependOn(&lua_exe.step);
+
+    return lua_exe;
 }
