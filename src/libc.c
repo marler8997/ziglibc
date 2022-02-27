@@ -32,3 +32,9 @@ int printf(const char *format, ...)
   va_end(args);
   return result;
 }
+
+int snprintf(char * restrict s, size_t n, const char * restrict format, ...)
+{
+  fprintf(stderr, "snprintf not implemented");
+  abort();
+}
