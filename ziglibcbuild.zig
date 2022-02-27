@@ -14,7 +14,7 @@ pub const ZigLibcOptions = struct {
 //            @panic("dynamic linking to ziglibc not implemented");
 //        },
 //    }
-//    step.addIncludePath("inc");
+//    step.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
 //    const lib = step.builder.addStaticLibrary("ziglibc", "src" ++ std.fs.path.sep_str ++ "libc.zig");
 //    step.link_objects.append(.{
 //        .static_path = .{ .path =
@@ -35,7 +35,7 @@ pub fn addZigLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.L
     lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "libc.c", &[_][]const u8 {
         "-std=c11",
     });
-    lib.addIncludePath("inc");
+    lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     return lib;
 }
 

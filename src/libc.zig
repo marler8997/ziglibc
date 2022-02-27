@@ -2,10 +2,10 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const c = @cImport({
-    @cInclude("../inc/stdio.h");
-    @cInclude("../inc/setjmp.h");
-    @cInclude("../inc/locale.h");
-    @cInclude("../inc/time.h");
+    @cInclude("stdio.h");
+    @cInclude("setjmp.h");
+    @cInclude("locale.h");
+    @cInclude("time.h");
 });
 
 // __main appears to be a design inherited by LLVM from gcc.

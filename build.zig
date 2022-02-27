@@ -21,7 +21,7 @@ pub fn build(b: *std.build.Builder) void {
 
     {
         const exe = b.addExecutable("hello", "test" ++ std.fs.path.sep_str ++ "hello.c");
-        exe.addIncludePath("inc");
+        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         exe.linkLibrary(zig_libc);
         exe.linkLibrary(zig_start);
         exe.setTarget(target);
@@ -39,7 +39,7 @@ pub fn build(b: *std.build.Builder) void {
     }
     {
         const exe = b.addExecutable("strings", "test" ++ std.fs.path.sep_str ++ "strings.c");
-        exe.addIncludePath("inc");
+        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         exe.linkLibrary(zig_libc);
         exe.linkLibrary(zig_start);
         exe.setTarget(target);
@@ -92,7 +92,7 @@ fn addLua(
         "-std=c99",
     });
 
-    lua_exe.addIncludePath("inc");
+    lua_exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     lua_exe.linkLibrary(zig_libc);
     lua_exe.linkLibrary(zig_start);
 
