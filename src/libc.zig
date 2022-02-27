@@ -75,6 +75,17 @@ export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
     return a_next[0] - b_next[0];
 }
 
+export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_int {
+    var i: usize = 0;
+    while (i < n and a[i] == b[i] and a[0] != 0) : (i += 1) { }
+    return a[i] - b[i];
+}
+
+export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
+    _ = s1; _ = s2;
+    @panic("strcoll not implemented");
+}
+
 export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
     var next = s;
     while (true) : (next += 1) {
@@ -102,6 +113,11 @@ export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64
     _ = nptr; _ = endptr;
     @panic("strtod not implemented");
 }
+
+export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
+    std.debug.panic("strerror (num={}) not implemented", .{errnum});
+}
+
 
 // --------------------------------------------------------------------------------
 // signal
@@ -131,6 +147,62 @@ export const stdin: *c.FILE = &stdin_storage;
 export const stdout: *c.FILE = &stdout_storage;
 export const stderr: *c.FILE = &stderr_storage;
 
+const global = struct {
+    // TODO: remove this global limit on file handles
+    //       probably do an array of pages holding the file objects.
+    //       the address to any file can be done in O(1) by decoding
+    //       the page index and file offset
+    const max_file_count = 100;
+    var files_reserved: [max_file_count]bool = [_]bool { false } ** max_file_count;
+    var files: [100]c.FILE = undefined;
+
+    fn reserveFile() *c.FILE {
+        var i: usize = 0;
+        while (i < files_reserved.len) : (i += 1) {
+            if (!@atomicRmw(bool, &files_reserved[i], .Xchg, true, .SeqCst)) {
+                return &files[i];
+            }
+        }
+        @panic("out of file handles");
+    }
+    fn releaseFile(file: *c.FILE) void {
+        const i = (@ptrToInt(file) - @ptrToInt(&files[0])) / @sizeOf(usize);
+        if (!@atomicRmw(bool, &files_reserved[i], .Xchg, false, .SeqCst)) {
+            std.debug.panic("released FILE (i={} ptr={*}) that was not reserved", .{i, file});
+        }
+    }
+};
+
+export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
+    var flags: u32 = 0;
+    var os_mode: std.os.mode_t = 0;
+    for (std.mem.span(mode)) |mode_char| {
+        if (mode_char == 'r') {
+            flags |= std.os.O.RDONLY;
+        } else if (mode_char == 'w') {
+            flags |= std.os.O.WRONLY;
+        } else {
+            std.debug.panic("unhandled open flag '{}' (from '{s}')", .{c, mode});
+        }
+    }
+    const fd = std.os.system.open(filename, flags, os_mode);
+    switch (std.os.errno(fd)) {
+        .SUCCESS => {},
+        else => |e| {
+            errno = @enumToInt(e);
+            return null;
+        },
+    }
+    const file = global.reserveFile();
+    file.fd = @intCast(c_int, fd);
+    return file;
+}
+
+export fn fclose(stream: *c.FILE) callconv(.C) c_int {
+    std.os.close(stream.fd);
+    global.releaseFile(stream);
+    return 0;
+}
 
 export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (builtin.os.tag == .windows) {

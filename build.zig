@@ -25,6 +25,10 @@ pub fn build(b: *std.build.Builder) void {
 
     const test_step = b.step("test", "Run unit tests");
 
+    const test_env_exe = b.addExecutable("testenv", "test" ++ std.fs.path.sep_str ++ "testenv.zig");
+    test_env_exe.setTarget(target);
+    test_env_exe.setBuildMode(mode);
+
     {
         const exe = addTest("hello", b, target, mode, zig_libc, zig_start);
         const run_step = exe.run();
@@ -36,6 +40,15 @@ pub fn build(b: *std.build.Builder) void {
     {
         const exe = addTest("strings", b, target, mode, zig_libc, zig_start);
         const run_step = exe.run();
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
+    {
+        const exe = addTest("fs", b, target, mode, zig_libc, zig_start);
+        const run_step = test_env_exe.run();
+        run_step.addArtifactArg(exe);
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
         };
