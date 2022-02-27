@@ -7,20 +7,11 @@ pub const ZigLibcOptions = struct {
     link: LinkKind,
 };
 
-//pub fn addZigLibc(step: *LibExeObjStep, opt: ZigLibcOptions) void {
-//    switch (opt.link) {
-//        .static => {},
-//        .dynamic => {
-//            @panic("dynamic linking to ziglibc not implemented");
-//        },
-//    }
-//    step.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-//    const lib = step.builder.addStaticLibrary("ziglibc", "src" ++ std.fs.path.sep_str ++ "libc.zig");
-//    step.link_objects.append(.{
-//        .static_path = .{ .path =
-//    }) catch unreachable;
-//}
-//
+/// Provides a _start symbol that will call C main
+pub fn addZigStart(builder: *std.build.Builder) *std.build.LibExeObjStep {
+    const lib = builder.addStaticLibrary("zigstart", "src" ++ std.fs.path.sep_str ++ "zigstart.zig");
+    return lib;
+}
 
 // Returns ziglibc as a LibExeObjStep
 // Caller will also need to add the include path to get the C headers
@@ -39,18 +30,19 @@ pub fn addZigLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.L
     return lib;
 }
 
-
-/// Provides a _start symbol that will call C main
-pub fn addZigStart(builder: *std.build.Builder) *std.build.LibExeObjStep {
-    const lib = builder.addStaticLibrary("zigstart", "src" ++ std.fs.path.sep_str ++ "zigstart.zig");
+// Returns ziglibc as a LibExeObjStep
+// Caller will also need to add the include path to get the C headers
+pub fn addZigLibPosix(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibExeObjStep {
+    switch (opt.link) {
+        .static => {},
+        .dynamic => {
+            @panic("dynamic linking to ziglibposix not implemented");
+        },
+    }
+    const lib = builder.addStaticLibrary("ziglibposix", "src" ++ std.fs.path.sep_str ++ "posix.zig");
+    //lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "posix.c", &[_][]const u8 {
+    //    "-std=c11",
+    //});
+    //lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     return lib;
 }
-
-// Provides a _start symbol that will call C main
-//pub fn addZigStart(exe: *std.build.LibExeObjStep) void {
-//    exe.builder.addStaticLibrary("zigstart", "src" ++ std.fs.path.sep_str ++ "zigstart.zig");
-//    exe.linkLibrary
-//    exe.link_objects.append(.{
-//        .static_path = .{ .path =
-//    }) catch unreachable;
-//}

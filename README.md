@@ -2,6 +2,8 @@
 
 An exploration on creating a libc implementation in Zig.
 
+"libc" includes implementations for the C Standard and the Posix Standard.
+
 # Thoughts
 
 I'd like a common codebase that can create libc headers that emulate various libc implementations.

@@ -17,20 +17,16 @@ pub fn build(b: *std.build.Builder) void {
     zig_libc.setTarget(target);
     zig_libc.setBuildMode(mode);
 
+    const zig_lib_posix = libcbuild.addZigLibPosix(b, .{
+        .link = .static,
+    });
+    zig_lib_posix.setTarget(target);
+    zig_lib_posix.setBuildMode(mode);
+
     const test_step = b.step("test", "Run unit tests");
 
     {
-        const exe = b.addExecutable("hello", "test" ++ std.fs.path.sep_str ++ "hello.c");
-        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-        exe.linkLibrary(zig_libc);
-        exe.linkLibrary(zig_start);
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
-        // TODO: should zig_libc and zig_start be able to add library dependencies?
-        if (target.getOs().tag == .windows) {
-            exe.linkSystemLibrary("ntdll");
-            exe.linkSystemLibrary("kernel32");
-        }
+        const exe = addTest("hello", b, target, mode, zig_libc, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Hello\n",
@@ -38,25 +34,53 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = b.addExecutable("strings", "test" ++ std.fs.path.sep_str ++ "strings.c");
-        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-        exe.linkLibrary(zig_libc);
-        exe.linkLibrary(zig_start);
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
-        // TODO: should zig_libc and zig_start be able to add library dependencies?
-        if (target.getOs().tag == .windows) {
-            exe.linkSystemLibrary("ntdll");
-            exe.linkSystemLibrary("kernel32");
-        }
+        const exe = addTest("strings", b, target, mode, zig_libc, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
         };
         test_step.dependOn(&run_step.step);
     }
+    {
+        const exe = addTest("getopt", b, target, mode, zig_libc, zig_start);
+        addPosix(exe, zig_lib_posix);
+        const run_step = exe.run();
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        // NOTE: just build for now, until I implement getopt
+        test_step.dependOn(&exe.step);
+        //test_step.dependOn(&run_step.step);
+    }
 
     _ = addLua(b, target, mode, zig_libc, zig_start);
+}
+
+fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
+    artifact.linkLibrary(zig_posix);
+    artifact.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
+}
+
+fn addTest(
+    comptime name: []const u8,
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    zig_libc: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
+) *std.build.LibExeObjStep {
+    const exe = b.addExecutable(name, "test" ++ std.fs.path.sep_str ++ name ++ ".c");
+    exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+    exe.linkLibrary(zig_libc);
+    exe.linkLibrary(zig_start);
+    exe.setTarget(target);
+    exe.setBuildMode(mode);
+    // TODO: should zig_libc and zig_start be able to add library dependencies?
+    if (target.getOs().tag == .windows) {
+        exe.linkSystemLibrary("ntdll");
+        exe.linkSystemLibrary("kernel32");
+    }
+    return exe;
 }
 
 fn addLua(

@@ -1,4 +1,4 @@
-## C Standards
+# C Standards
 
 See https://en.wikipedia.org/wiki/ANSI_C
 
@@ -58,6 +58,8 @@ https://port70.net/~nsz/c/c99/n1256.html
 * removed several dangerous C89 language features like implicit function declarations and implicit `int`
 
 ### C11
+
+https://port70.net/~nsz/c/c11/n1570.html
 
 * improved unicode support
 * type-generic expressions using the new `_Generic` keyword
