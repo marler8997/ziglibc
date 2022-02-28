@@ -58,6 +58,16 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
     //var e: ?[*:0]u8 = environ;
 }
 
+export fn realloc(ptr: [*]u8, size: usize) callconv(.C) [*]u8 {
+    _ = ptr; _ = size;
+    @panic("realloc not implemented");
+}
+
+export fn free(ptr: [*]u8) callconv(.C) void {
+    _ = ptr;
+    @panic("free not implemented");
+}
+
 // --------------------------------------------------------------------------------
 // string
 // --------------------------------------------------------------------------------
@@ -72,13 +82,13 @@ export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
         a_next += 1;
         b_next += 1;
     }
-    return a_next[0] - b_next[0];
+    return a_next[0] -| b_next[0];
 }
 
 export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_int {
     var i: usize = 0;
     while (i < n and a[i] == b[i] and a[0] != 0) : (i += 1) { }
-    return a[i] - b[i];
+    return a[i] -| b[i];
 }
 
 export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
@@ -92,6 +102,15 @@ export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
         if (next[0] == char) return next;
         if (next[0] == 0) return null;
     }
+}
+
+export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
+    const s2_len = strlen(s2);
+    var i: usize = 0;
+    while (true) {
+        if (0 == strncmp(s1, s2, s2_len)) return s1 + i;
+    }
+    return null;
 }
 
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) [*:0]u8 {
@@ -117,7 +136,6 @@ export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64
 export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
     std.debug.panic("strerror (num={}) not implemented", .{errnum});
 }
-
 
 // --------------------------------------------------------------------------------
 // signal
@@ -164,7 +182,46 @@ export const stdin: *c.FILE = &global.files[0];
 export const stdout: *c.FILE = &global.files[1];
 export const stderr: *c.FILE = &global.files[2];
 
+export fn getc(stream: *c.FILE) callconv(.C) c_int {
+    _ = stream;
+    @panic("getc not implemented");
+}
+
+comptime {
+    @export(getc, .{ .name = "fgetc" });
+}
+
+export fn _fread_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
+    _ = ptr; _ = size; _ = stream;
+    @panic("_fread_buf not implemented");
+}
+
+export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
+    const total = size * nmemb;
+    const result = _fread_buf(ptr, total, stream);
+    // TODO: if length read is not aligned then we need to leave it
+    //       in an interal read buffer inside FILE
+    _ = result;
+    @panic("fread not implemented");
+    //if (result == total) return nmemb;
+    //return result / size;
+    //return _fread_buf(ptr,
+}
+
+export fn feof(stream: *c.FILE) callconv(.C) c_int {
+    _ = stream;
+    @panic("feof not implemented");
+}
+
+export fn ferror(stream: *c.FILE) callconv(.C) c_int {
+    return stream.errno;
+}
+
 export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
+    if (builtin.os.tag == .windows) {
+        @panic("fopen not implemented on windows");
+    }
+
     var flags: u32 = 0;
     var os_mode: std.os.mode_t = 0;
     for (std.mem.span(mode)) |mode_char| {
@@ -189,8 +246,17 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
     return file;
 }
 
+export fn freopen(filename: [*:0]const u8, mode: [*:0]const u8, stream: *c.FILE) callconv(.C) *c.FILE {
+    _ = filename; _ = mode; _ = stream;
+    @panic("freopen not implemented");
+}
+
 export fn fclose(stream: *c.FILE) callconv(.C) c_int {
-    std.os.close(stream.fd);
+    if (builtin.os.tag == .windows) {
+        std.os.close(stream.fd.?);
+    } else {
+        std.os.close(stream.fd);
+    }
     global.releaseFile(stream);
     return 0;
 }
@@ -325,4 +391,15 @@ export fn localeconv() callconv(.C) *c.lconv {
 export fn time(timer: c.time_t) callconv(.C) c.time_t {
     _ = timer;
     @panic("time not implemented");
+}
+
+// --------------------------------------------------------------------------------
+// ctype
+// --------------------------------------------------------------------------------
+export fn isalnum(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isAlNum(std.math.cast(u8, char) catch return 0));
+}
+
+export fn toupper(char: c_int) callconv(.C) c_int {
+    return std.ascii.toUpper(std.math.cast(u8, char) catch return char);
 }

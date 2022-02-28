@@ -25,5 +25,12 @@ int main(int argc, char *argv[])
     expect(s + 4 == strchr(s, 'e'));
   }
 
+  {
+    const char *s = "abcdef";
+    expect(s+1 == strstr(s, "bcde"));
+    expect(NULL == strstr(s, "bcdeg"));
+  }
+
   puts("Success!");
+  return 0;
 }

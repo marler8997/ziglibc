@@ -18,6 +18,7 @@ implementation for all of libc and dynamic means emulating whatever libc target 
 
 The following is a list of C projects that I could use to test ziglibc with:
 
+* libc-test: https://wiki.musl-libc.org/libc-test.html (use to test our libc)
 * Lua
 * sqlite
 * zlib

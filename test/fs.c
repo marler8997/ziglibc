@@ -15,4 +15,5 @@ int main(int argc, char *argv[])
   //}
   //expect(0 == fclose(file));
   printf("Success!\n");
+  return 0;
 }
