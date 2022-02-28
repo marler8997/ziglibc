@@ -17,7 +17,9 @@ fn __main() callconv(.C) void {
 
     // TODO: call constructors
 }
-comptime { if (builtin.os.tag == .windows) @export(__main, .{ .name = "__main" }); }
+comptime {
+    if (builtin.os.tag == .windows) @export(__main, .{ .name = "__main" });
+}
 
 const windows = struct {
     // always sets out_written, even if it returns an error
@@ -25,7 +27,7 @@ const windows = struct {
         var written: usize = 0;
         while (written < buffer.len) {
             const next_write = std.math.cast(u32, buffer.len - written) catch std.math.maxInt(u32);
-            var last_written : u32 = undefined;
+            var last_written: u32 = undefined;
             const result = std.os.windows.kernel32.WriteFile(hFile, buffer.ptr + written, next_write, &last_written, null);
             written += last_written; // WriteFile always sets last_written to 0 before doing anything
             if (result != 0) {
@@ -59,7 +61,8 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
 }
 
 export fn realloc(ptr: [*]u8, size: usize) callconv(.C) [*]u8 {
-    _ = ptr; _ = size;
+    _ = ptr;
+    _ = size;
     @panic("realloc not implemented");
 }
 
@@ -87,12 +90,13 @@ export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
 
 export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_int {
     var i: usize = 0;
-    while (i < n and a[i] == b[i] and a[0] != 0) : (i += 1) { }
+    while (i < n and a[i] == b[i] and a[0] != 0) : (i += 1) {}
     return a[i] -| b[i];
 }
 
 export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
-    _ = s1; _ = s2;
+    _ = s1;
+    _ = s2;
     @panic("strcoll not implemented");
 }
 
@@ -119,17 +123,20 @@ export fn strcpy(s1: [*]u8, s2: [*:0]const u8) [*:0]u8 {
 }
 
 export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
-    _ = s1; _ = s2;
+    _ = s1;
+    _ = s2;
     @panic("strspn not implemented");
 }
 
 export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) [*]const u8 {
-    _ = s1; _ = s2;
+    _ = s1;
+    _ = s2;
     @panic("strpbrk not implemented");
 }
 
 export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64 {
-    _ = nptr; _ = endptr;
+    _ = nptr;
+    _ = endptr;
     @panic("strtod not implemented");
 }
 
@@ -140,7 +147,7 @@ export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
 // --------------------------------------------------------------------------------
 // signal
 // --------------------------------------------------------------------------------
-export fn signal(sig: c_int, func: fn(c_int) callconv(.C) void) void {
+export fn signal(sig: c_int, func: fn (c_int) callconv(.C) void) void {
     _ = sig;
     _ = func;
     @panic("signal not implemented");
@@ -155,12 +162,12 @@ const global = struct {
     //       the address to any file can be done in O(1) by decoding
     //       the page index and file offset
     const max_file_count = 100;
-    var files_reserved: [max_file_count]bool = [_]bool { false } ** max_file_count;
-    var files: [max_file_count]c.FILE = [_]c.FILE {
+    var files_reserved: [max_file_count]bool = [_]bool{false} ** max_file_count;
+    var files: [max_file_count]c.FILE = [_]c.FILE{
         .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO, .errno = undefined },
         .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO, .errno = undefined },
         .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO, .errno = undefined },
-    } ++ ([_]c.FILE { undefined} ** (max_file_count - 3));
+    } ++ ([_]c.FILE{undefined} ** (max_file_count - 3));
 
     fn reserveFile() *c.FILE {
         var i: usize = 0;
@@ -174,7 +181,7 @@ const global = struct {
     fn releaseFile(file: *c.FILE) void {
         const i = (@ptrToInt(file) - @ptrToInt(&files[0])) / @sizeOf(usize);
         if (!@atomicRmw(bool, &files_reserved[i], .Xchg, false, .SeqCst)) {
-            std.debug.panic("released FILE (i={} ptr={*}) that was not reserved", .{i, file});
+            std.debug.panic("released FILE (i={} ptr={*}) that was not reserved", .{ i, file });
         }
     }
 };
@@ -192,7 +199,9 @@ comptime {
 }
 
 export fn _fread_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
-    _ = ptr; _ = size; _ = stream;
+    _ = ptr;
+    _ = size;
+    _ = stream;
     @panic("_fread_buf not implemented");
 }
 
@@ -230,7 +239,7 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
         } else if (mode_char == 'w') {
             flags |= std.os.O.WRONLY;
         } else {
-            std.debug.panic("unhandled open flag '{}' (from '{s}')", .{c, mode});
+            std.debug.panic("unhandled open flag '{}' (from '{s}')", .{ c, mode });
         }
     }
     const fd = std.os.system.open(filename, flags, os_mode);
@@ -247,7 +256,9 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
 }
 
 export fn freopen(filename: [*:0]const u8, mode: [*:0]const u8, stream: *c.FILE) callconv(.C) *c.FILE {
-    _ = filename; _ = mode; _ = stream;
+    _ = filename;
+    _ = mode;
+    _ = stream;
     @panic("freopen not implemented");
 }
 
@@ -265,7 +276,7 @@ export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (builtin.os.tag == .windows) {
         @panic("fputc not implemented");
     }
-    const buf = [_]u8 { @intCast(u8, 0xff & character) };
+    const buf = [_]u8{@intCast(u8, 0xff & character)};
     const written = std.os.system.write(stream.fd, &buf, 1);
     switch (std.os.errno(written)) {
         .SUCCESS => {
@@ -284,7 +295,7 @@ export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
 export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
     if (builtin.os.tag == .windows) {
         var written: usize = undefined;
-        windows.writeAll(stream.fd.?, ptr[0 .. size], &written) catch {
+        windows.writeAll(stream.fd.?, ptr[0..size], &written) catch {
             stream.errno = @enumToInt(std.os.windows.kernel32.GetLastError());
         };
         return written;
@@ -343,7 +354,9 @@ export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) [*]u8 {
-    _ = s; _ = n; _ = stream;
+    _ = s;
+    _ = n;
+    _ = stream;
     @panic("fgets not implemented");
 }
 
@@ -351,17 +364,20 @@ export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) [*]u8 {
 // math
 // --------------------------------------------------------------------------------
 export fn frexp(value: f32, exp: *c_int) callconv(.C) f64 {
-    _ = value; _ = exp;
+    _ = value;
+    _ = exp;
     @panic("frexp not implemented");
 }
 
 export fn ldexp(x: f64, exp: c_int) callconv(.C) f64 {
-    _ = x; _ = exp;
+    _ = x;
+    _ = exp;
     @panic("ldexp not implemented");
 }
 
 export fn pow(x: f64, y: f64) callconv(.C) f64 {
-    _ = x; _ = y;
+    _ = x;
+    _ = y;
     @panic("pow not implemented");
 }
 
@@ -374,7 +390,8 @@ export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
 }
 
 export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
-    _ = env; _ = val;
+    _ = env;
+    _ = val;
     @panic("longjmp not implemented");
 }
 

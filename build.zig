@@ -114,18 +114,18 @@ fn addLua(
     lua_exe.step.dependOn(&lua_repo.step);
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    files.append(b.pathJoin(&.{lua_repo_path, "lua.c"})) catch unreachable;
+    files.append(b.pathJoin(&.{ lua_repo_path, "lua.c" })) catch unreachable;
     inline for (luabuild.core_objects) |obj| {
-        files.append(b.pathJoin(&.{lua_repo_path, obj ++ ".c"})) catch unreachable;
+        files.append(b.pathJoin(&.{ lua_repo_path, obj ++ ".c" })) catch unreachable;
     }
     inline for (luabuild.aux_objects) |obj| {
-        files.append(b.pathJoin(&.{lua_repo_path, obj ++ ".c"})) catch unreachable;
+        files.append(b.pathJoin(&.{ lua_repo_path, obj ++ ".c" })) catch unreachable;
     }
     inline for (luabuild.lib_objects) |obj| {
-        files.append(b.pathJoin(&.{lua_repo_path, obj ++ ".c"})) catch unreachable;
+        files.append(b.pathJoin(&.{ lua_repo_path, obj ++ ".c" })) catch unreachable;
     }
 
-    lua_exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    lua_exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8{
         "-std=c99",
     });
 

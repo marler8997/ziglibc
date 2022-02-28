@@ -11,6 +11,8 @@ export var optind: c_int = undefined;
 export var optopt: c_int = undefined;
 
 export fn getopt(argc: c_int, argv: [*:null]?[*:0]u8, optstring: [*:0]const u8) callconv(.C) c_int {
-    _ = argc; _ = argv; _ = optstring;
+    _ = argc;
+    _ = argv;
+    _ = optstring;
     @panic("getopt not implemented");
 }
