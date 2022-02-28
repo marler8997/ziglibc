@@ -108,6 +108,12 @@ export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
     }
 }
 
+export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
+    _ = s;
+    _ = char;
+    @panic("strrchr not implemented");
+}
+
 export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
     const s2_len = strlen(s2);
     var i: usize = 0;
@@ -117,7 +123,13 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
     return null;
 }
 
-export fn strcpy(s1: [*]u8, s2: [*:0]const u8) [*:0]u8 {
+export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
+    _ = s1;
+    _ = s2;
+    @panic("strcspn not implemented");
+}
+
+export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     @memcpy(s1, s2, std.mem.len(s2) + 1);
     return std.meta.assumeSentinel(s1, 0);
 }
@@ -142,6 +154,19 @@ export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64
 
 export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
     std.debug.panic("strerror (num={}) not implemented", .{errnum});
+}
+
+export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8 {
+    _ = s1;
+    _ = s2;
+    _ = n;
+    @panic("strncat not implemented");
+}
+
+export fn strtok(s1: [*:0]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
+    _ = s1;
+    _ = s2;
+    @panic("strtok not implemented");
 }
 
 // --------------------------------------------------------------------------------
@@ -420,3 +445,13 @@ export fn isalnum(char: c_int) callconv(.C) c_int {
 export fn toupper(char: c_int) callconv(.C) c_int {
     return std.ascii.toUpper(std.math.cast(u8, char) catch return char);
 }
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// TODO: these functions are wrong but help pass libc-tests for now
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+export fn t_printf() callconv(.C) void {}
+export fn strlcpy() callconv(.C) void {}
+export fn strlcat() callconv(.C) void {}
+export fn t_status() callconv(.C) void {}

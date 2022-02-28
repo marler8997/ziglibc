@@ -27,4 +27,9 @@ void *memset(void *s, int c, size_t n);
 char *strerror(int errnum);
 size_t strlen(const char *s);
 
+// TODO: I'm not sure where strsignal comes from, it might
+//       be GNU-specific but the libc-test project requires it
+//       so I'm just inluding it for now.
+char* strsignal(int);
+
 #endif /* _STRING_H */
