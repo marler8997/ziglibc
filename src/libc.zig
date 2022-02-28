@@ -11,9 +11,9 @@ const c = @cImport({
 // __main appears to be a design inherited by LLVM from gcc.
 // it's typically provided by libgcc and is used to call constructors
 fn __main() callconv(.C) void {
-    stdin_storage.fd = std.os.windows.peb().ProcessParameters.hStdInput;
-    stdout_storage.fd = std.os.windows.peb().ProcessParameters.hStdOutput;
-    stderr_storage.fd = std.os.windows.peb().ProcessParameters.hStdError;
+    stdin.fd = std.os.windows.peb().ProcessParameters.hStdInput;
+    stdout.fd = std.os.windows.peb().ProcessParameters.hStdOutput;
+    stderr.fd = std.os.windows.peb().ProcessParameters.hStdError;
 
     // TODO: call constructors
 }
@@ -131,22 +131,6 @@ export fn signal(sig: c_int, func: fn(c_int) callconv(.C) void) void {
 // --------------------------------------------------------------------------------
 // stdio
 // --------------------------------------------------------------------------------
-var stdin_storage: c.FILE = .{
-    .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO,
-    .errno = undefined,
-};
-var stdout_storage: c.FILE = .{
-    .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO,
-    .errno = undefined,
-};
-var stderr_storage: c.FILE = .{
-    .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO,
-    .errno = undefined,
-};
-export const stdin: *c.FILE = &stdin_storage;
-export const stdout: *c.FILE = &stdout_storage;
-export const stderr: *c.FILE = &stderr_storage;
-
 const global = struct {
     // TODO: remove this global limit on file handles
     //       probably do an array of pages holding the file objects.
@@ -154,7 +138,11 @@ const global = struct {
     //       the page index and file offset
     const max_file_count = 100;
     var files_reserved: [max_file_count]bool = [_]bool { false } ** max_file_count;
-    var files: [100]c.FILE = undefined;
+    var files: [max_file_count]c.FILE = [_]c.FILE {
+        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO, .errno = undefined },
+    } ++ ([_]c.FILE { undefined} ** (max_file_count - 3));
 
     fn reserveFile() *c.FILE {
         var i: usize = 0;
@@ -172,6 +160,9 @@ const global = struct {
         }
     }
 };
+export const stdin: *c.FILE = &global.files[0];
+export const stdout: *c.FILE = &global.files[1];
+export const stderr: *c.FILE = &global.files[2];
 
 export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
     var flags: u32 = 0;
