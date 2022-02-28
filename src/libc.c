@@ -33,8 +33,16 @@ int printf(const char *format, ...)
   return result;
 }
 
+int vsnprintf(char * restrict s, size_t n, const char * restrict format, va_list arg)
+{
+  fprintf(stderr, "vsnprintf not implemented\n");
+  fprintf(stderr, "    format string is: ");
+  fprintf(stderr, format);
+  abort();
+}
+
 int snprintf(char * restrict s, size_t n, const char * restrict format, ...)
 {
-  fprintf(stderr, "snprintf not implemented");
+  fprintf(stderr, "snprintf not implemented\n");
   abort();
 }

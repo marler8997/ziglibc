@@ -109,9 +109,12 @@ export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
 }
 
 export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
-    _ = s;
-    _ = char;
-    @panic("strrchr not implemented");
+    var next = s + strlen(s);
+    while (true) {
+        if (next[0] == char) return next;
+        if (next == s) return null;
+        next = next - 1;
+    }
 }
 
 export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
@@ -123,27 +126,61 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
     return null;
 }
 
-export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
-    _ = s1;
-    _ = s2;
-    @panic("strcspn not implemented");
-}
-
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     @memcpy(s1, s2, std.mem.len(s2) + 1);
     return std.meta.assumeSentinel(s1, 0);
 }
 
-export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
-    _ = s1;
-    _ = s2;
-    @panic("strspn not implemented");
+export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8 {
+    const dest = s1 + strlen(s1);
+    var i: usize = 0;
+    while (s2[i] != 0 and i < n) : (i += 1) {
+        dest[i] = s2[i];
+    }
+    dest[i] = 0;
+    return s1;
 }
 
-export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) [*]const u8 {
-    _ = s1;
-    _ = s2;
-    @panic("strpbrk not implemented");
+export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
+    var spn: usize = 0;
+    while (true) : (spn += 1) {
+        if (s1[spn] == 0 or null == strchr(s2, s1[spn])) return spn;
+    }
+}
+
+export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
+    var spn: usize = 0;
+    while (true) : (spn += 1) {
+        if (s1[spn] == 0 or null != strchr(s2, s1[spn])) return spn;
+    }
+}
+
+export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*]const u8 {
+    var next = s1;
+    while (true) : (next += 1) {
+        if (next[0] == 0) return null;
+        if (strchr(s2, next[0]) != null) return next;
+    }
+}
+
+export fn strtok(s1: ?[*:0]u8, s2: [*:0]const u8) callconv(.C) ?[*:0]u8 {
+    if (s1 != null) {
+        global.strtok_ptr = s1;
+    }
+    var next = global.strtok_ptr.?;
+    next += strspn(next, s2);
+    if (next[0] == 0) {
+        return null;
+    }
+    const start = next;
+    const end = start + 1 + strcspn(start + 1, s2);
+    if (end[0] == 0) {
+        global.strtok_ptr = end;
+    } else {
+        global.strtok_ptr = end + 1;
+        end[0] = 0;
+    }
+    return start;
 }
 
 export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64 {
@@ -156,18 +193,6 @@ export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
     std.debug.panic("strerror (num={}) not implemented", .{errnum});
 }
 
-export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8 {
-    _ = s1;
-    _ = s2;
-    _ = n;
-    @panic("strncat not implemented");
-}
-
-export fn strtok(s1: [*:0]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
-    _ = s1;
-    _ = s2;
-    @panic("strtok not implemented");
-}
 
 // --------------------------------------------------------------------------------
 // signal
@@ -182,6 +207,8 @@ export fn signal(sig: c_int, func: fn (c_int) callconv(.C) void) void {
 // stdio
 // --------------------------------------------------------------------------------
 const global = struct {
+    var strtok_ptr: ?[*:0]u8 = undefined;
+
     // TODO: remove this global limit on file handles
     //       probably do an array of pages holding the file objects.
     //       the address to any file can be done in O(1) by decoding
@@ -451,7 +478,5 @@ export fn toupper(char: c_int) callconv(.C) c_int {
 // TODO: these functions are wrong but help pass libc-tests for now
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-export fn t_printf() callconv(.C) void {}
 export fn strlcpy() callconv(.C) void {}
 export fn strlcat() callconv(.C) void {}
-export fn t_status() callconv(.C) void {}

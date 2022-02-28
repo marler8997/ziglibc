@@ -43,6 +43,6 @@ pub fn addZigLibPosix(builder: *std.build.Builder, opt: ZigLibcOptions) *std.bui
     //lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "posix.c", &[_][]const u8 {
     //    "-std=c11",
     //});
-    //lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+    lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     return lib;
 }

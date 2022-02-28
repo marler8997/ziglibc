@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const c = @cImport({
+    @cInclude("errno.h");
     //@cInclude("unistd.h");
 });
 
@@ -15,4 +16,18 @@ export fn getopt(argc: c_int, argv: [*:null]?[*:0]u8, optstring: [*:0]const u8) 
     _ = argv;
     _ = optstring;
     @panic("getopt not implemented");
+}
+
+export fn write(fd: c_int, buf: [*]const u8, nbyte: usize) isize {
+    if (builtin.os.tag == .windows) {
+        @panic("write not implemented on windows");
+    }
+    const rc = std.os.system.write(fd, buf, nbyte);
+    switch (std.os.errno(rc)) {
+        .SUCCESS => return @intCast(isize, rc),
+        else => |e| {
+            c.errno = @enumToInt(e);
+            return -1;
+        }
+    }
 }

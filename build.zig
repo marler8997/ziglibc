@@ -81,8 +81,12 @@ pub fn build(b: *std.build.Builder) void {
             libc_test_step.dependOn(&lib.step);
         }
         const libc_inc_path = b.pathJoin(&.{libc_test_path, "src", "common"});
+        const common_src = &[_][]const u8 {
+            b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
+        };
         {
-            const exe = b.addExecutable("string", b.pathJoin(&.{libc_test_path, "/src/functional/string.c"}));
+            const exe = b.addExecutable("string", b.pathJoin(&.{libc_test_path, "src", "functional", "string.c"}));
+            exe.addCSourceFiles(common_src, &[_][]const u8 {});
             exe.setTarget(target);
             exe.setBuildMode(mode);
             exe.addIncludePath(libc_inc_path);
@@ -90,7 +94,8 @@ pub fn build(b: *std.build.Builder) void {
             exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
             exe.linkLibrary(zig_libc);
             exe.linkLibrary(zig_start);
-            libc_test_step.dependOn(&exe.step);
+            exe.linkLibrary(zig_lib_posix);
+            libc_test_step.dependOn(&exe.run().step);
         }
     }
 
