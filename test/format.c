@@ -8,8 +8,12 @@ int main(int argc, char *argv[])
   {
     int written = snprintf(buffer, sizeof(buffer), "Hello %s\n", "World!");
     expect(written == 13);
-    buffer[13] = 0;
     expect(0 == strcmp(buffer, "Hello World!\n"));
+  }
+  {
+    int written = snprintf(buffer, sizeof(buffer), "Hello number %d\n", 1293);
+    expect(written == 18);
+    expect(0 == strcmp(buffer, "Hello number 1293\n"));
   }
   
   printf("Success!\n");

@@ -6,6 +6,7 @@
 
 // TODO: restrict pointers?
 size_t _fwrite_buf(const char *ptr, size_t size, FILE *stream);
+size_t _formatCInt(char *buf, int value);
 
 struct Writer {
   // if len is 0, then s is null-terminated
@@ -15,7 +16,7 @@ struct Writer {
   size_t (*write)(struct Writer *writer, const char *s, size_t len);
 };
 // returns: 0 on success
-int vformat(size_t *out_written, struct Writer *writer, const char *fmt, va_list args) {
+static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, va_list args) {
   *out_written = 0;
 
   while (1) {
@@ -31,15 +32,21 @@ int vformat(size_t *out_written, struct Writer *writer, const char *fmt, va_list
           return -1; // error
         }
       }
-      fmt = next_percent_char + 1;
     }
+    fmt = next_percent_char + 1;
     if (fmt[0] == 's') {
       const char *s = va_arg(args, const char *);
       size_t written = writer->write(writer, s, 0);
       *out_written += written;
-      if (s[written] != 0) {
-        return -1; // error
-      }
+      if (s[written] != 0) return -1; // error
+      fmt++;
+    } else if (fmt[0] == 'd') {
+      char buf[100];
+      const int value = va_arg(args, int);
+      size_t len = _formatCInt(buf, value);
+      size_t written = writer->write(writer, buf, len);
+      *out_written += written;
+      if (written != len) return -1; // error
       fmt++;
     } else if (fmt[0] == 0) {
       return -1; // spurious trailing '%'
@@ -63,7 +70,7 @@ struct StreamWriter {
   struct Writer base;
   FILE *stream;
 };
-size_t streamWrite(struct Writer *base, const char *s, size_t len)
+static size_t streamWrite(struct Writer *base, const char *s, size_t len)
 {
   struct StreamWriter *writer = (struct StreamWriter*)base;
   if (len == 0) len = strlen(s);
@@ -108,7 +115,7 @@ struct BufferWriter {
   char *buf;
   size_t len;
 };
-size_t bufferWrite(struct Writer *base, const char *s, size_t len)
+static size_t bufferWrite(struct Writer *base, const char *s, size_t len)
 {
   struct BufferWriter *writer = (struct BufferWriter*)base;
   if (len == 0) len = strlen(s);
@@ -130,6 +137,10 @@ int vsnprintf(char * restrict s, size_t n, const char * restrict format, va_list
   writer.len = n;
   size_t written;
   if (0 == vformat(&written, &writer.base, format, args)) {
+    // TODO: make sure this comparison isn't off by 1
+    if (written < n) {
+      s[written] = 0;
+    }
     return (int)written;
   }
   return -1;

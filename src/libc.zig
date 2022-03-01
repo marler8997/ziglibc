@@ -412,6 +412,13 @@ export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) [*]u8 {
     @panic("fgets not implemented");
 }
 
+// NOTE: this is not a libc function, it's exported so it can be used
+//       by vformat in libc.c
+// buf must be at least 100 bytes
+export fn _formatCInt(buf: [*]u8, value: c_int) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, 10, .lower, .{});
+}
+
 // --------------------------------------------------------------------------------
 // math
 // --------------------------------------------------------------------------------
