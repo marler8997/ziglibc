@@ -55,6 +55,15 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
+        const exe = addTest("format", b, target, mode, zig_libc, zig_start);
+        const run_step = test_env_exe.run();
+        run_step.addArtifactArg(exe);
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
+    {
         const exe = addTest("getopt", b, target, mode, zig_libc, zig_start);
         addPosix(exe, zig_lib_posix);
         const run_step = exe.run();
