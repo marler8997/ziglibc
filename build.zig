@@ -164,6 +164,7 @@ fn addLua(
     lua_exe.setTarget(target);
     lua_exe.setBuildMode(mode);
     lua_exe.step.dependOn(&lua_repo.step);
+    lua_exe.install();
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
     files.append(b.pathJoin(&.{ lua_repo_path, "lua.c" })) catch unreachable;
@@ -186,7 +187,7 @@ fn addLua(
     lua_exe.linkLibrary(zig_start);
 
     const step = b.step("lua", "build the LUA interpreter");
-    step.dependOn(&lua_exe.step);
+    step.dependOn(&lua_exe.install_step.?.step);
 
     return lua_exe;
 }

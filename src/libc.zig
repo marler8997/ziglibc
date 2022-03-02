@@ -75,6 +75,11 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
     //var e: ?[*:0]u8 = environ;
 }
 
+export fn system(string: [*:0]const u8) callconv(.C) c_int {
+    _ = string;
+    @panic("system function not implemented");
+}
+
 export fn realloc(ptr: [*]u8, size: usize) callconv(.C) [*]u8 {
     _ = ptr;
     _ = size;
@@ -298,6 +303,17 @@ const global = struct {
 export const stdin: *c.FILE = &global.files[0];
 export const stdout: *c.FILE = &global.files[1];
 export const stderr: *c.FILE = &global.files[2];
+
+export fn remove(filename: [*:0]const u8) callconv(.C) c_int {
+    _ = filename;
+    @panic("remove not implemented");
+}
+
+export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
+    _ = old;
+    _ = new;
+    @panic("rename not implemented");
+}
 
 export fn getc(stream: *c.FILE) callconv(.C) c_int {
     _ = stream;
@@ -528,6 +544,14 @@ export fn clearerr(stream: *c.FILE) callconv(.C) void {
     stream.errno = 0;
 }
 
+export fn setvbuf(stream: *c.FILE, buf: ?[*]u8, mode: c_int, size: usize) callconv(.C) c_int {
+    _ = stream;
+    _ = buf;
+    _ = mode;
+    _ = size;
+    @panic("setvbuf not implemented");
+}
+
 // NOTE: this is not a libc function, it's exported so it can be used
 //       by vformat in libc.c
 // buf must be at least 100 bytes
@@ -538,6 +562,35 @@ export fn _formatCInt(buf: [*]u8, value: c_int) callconv(.C) usize {
 // --------------------------------------------------------------------------------
 // math
 // --------------------------------------------------------------------------------
+export fn acos(x: f64) callconv(.C) f64 {
+    _ = x;
+    @panic("acos not implemented");
+}
+
+export fn asin(x: f64) callconv(.C) f64 {
+    _ = x;
+    @panic("asin not implemented");
+}
+
+export fn atan(x: f64) callconv(.C) f64 {
+    _ = x;
+    @panic("atan not implemented");
+}
+
+export fn atan2(y: f64, x: f64) callconv(.C) f64 {
+    _ = y;
+    _ = x;
+    @panic("atan2 not implemented");
+}
+
+// cos/sin are already defined somewhere in the libraries Zig includes
+// on linux, not sure what library though or how
+
+export fn tan(x: f64) callconv(.C) f64 {
+    _ = x;
+    @panic("tan not implemented");
+}
+
 export fn frexp(value: f32, exp: *c_int) callconv(.C) f64 {
     _ = value;
     _ = exp;
@@ -573,6 +626,12 @@ export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
 // --------------------------------------------------------------------------------
 // locale
 // --------------------------------------------------------------------------------
+export fn setlocale(category: c_int, locale: [*:0]const u8) callconv(.C) [*:0]u8 {
+    _ = category;
+    _ = locale;
+    @panic("setlocale not implemented");
+}
+
 export fn localeconv() callconv(.C) *c.lconv {
     @panic("localeconv not implemented");
 }
@@ -580,9 +639,42 @@ export fn localeconv() callconv(.C) *c.lconv {
 // --------------------------------------------------------------------------------
 // time
 // --------------------------------------------------------------------------------
-export fn time(timer: c.time_t) callconv(.C) c.time_t {
+export fn clock() callconv(.C) c.clock_t {
+    @panic("clock not implemented");
+}
+
+export fn difftime(time1: c.time_t, time0: c.time_t) callconv(.C) f64 {
+    _ = time1;
+    _ = time0;
+    @panic("difftime not implemented");
+}
+
+export fn mktime(timeptr: *c.tm) callconv(.C) c.time_t {
+    _ = timeptr;
+    @panic("mktime not implemented");
+}
+
+export fn time(timer: *c.time_t) callconv(.C) c.time_t {
     _ = timer;
     @panic("time not implemented");
+}
+
+export fn gmtime(timer: *c.time_t) callconv(.C) *c.tm {
+    _ = timer;
+    @panic("gmtime not implemented");
+}
+
+export fn localtime(timer: *const c.time_t) callconv(.C) *c.tm {
+    _ = timer;
+    @panic("localtime not implemented");
+}
+
+export fn strftime(s: [*]u8, maxsize: usize, format: [*:0]const u8, timeptr: *const c.tm) callconv(.C) usize {
+    _ = s;
+    _ = maxsize;
+    _ = format;
+    _ = timeptr;
+    @panic("strftime not implemented");
 }
 
 // --------------------------------------------------------------------------------
