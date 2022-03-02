@@ -85,13 +85,15 @@ export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
         a_next += 1;
         b_next += 1;
     }
-    return a_next[0] -| b_next[0];
+    return @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
 }
 
 export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_int {
     var i: usize = 0;
-    while (i < n and a[i] == b[i] and a[0] != 0) : (i += 1) {}
-    return a[i] -| b[i];
+    while (a[i] == b[i] and a[0] != 0) : (i += 1) {
+        if (i == n - 1) return 0;
+    }
+    return @intCast(c_int, a[i]) -| @intCast(c_int, b[i]);
 }
 
 export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
