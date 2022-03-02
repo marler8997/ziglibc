@@ -88,6 +88,14 @@ export fn free(ptr: [*]u8) callconv(.C) void {
 export fn strlen(s: [*:0]const u8) callconv(.C) usize {
     return std.mem.len(s);
 }
+// TODO: strnlen exists in some libc implementations, it might be defined by posix so
+//       I should probably move it to the posix lib
+fn strnlen(s: [*:0]const u8, max_len: usize) usize {
+    var i: usize = 0;
+    while (i < max_len and s[i] != 0) : (i += 1) { }
+    return i;
+}
+
 
 export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
     var a_next = a;
@@ -130,6 +138,8 @@ export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
     }
 }
 
+
+
 export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
     const s2_len = strlen(s2);
     var i: usize = 0;
@@ -142,6 +152,30 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     @memcpy(s1, s2, std.mem.len(s2) + 1);
     return std.meta.assumeSentinel(s1, 0);
+}
+
+// NOTE: strlcpy and strlcat appear in some libc implementations (rejected by glibc though)
+//       they don't appear to be a part of any standard.
+//       not sure whether they should live in this library or a separate one
+//       see https://lwn.net/Articles/507319/
+export fn strlcpy(dst: [*]u8, src: [*]const u8, size: usize) callconv(.C) usize {
+    var i: usize = 0;
+    while (true) : (i += 1) {
+        if (i == size) {
+            if (size > 0)
+                dst[size - 1] = 0;
+            return i + strlen(std.meta.assumeSentinel(src + i, 0));
+        }
+        dst[i] = src[i];
+        if (src[i] == 0) {
+            return i;
+        }
+    }
+}
+export fn strlcat(dst: [*:0]u8, src: [*:0]const u8, size: usize) callconv(.C) usize {
+    const dst_len = strnlen(dst, size);
+    if (dst_len == size) return dst_len + strlen(src);
+    return dst_len + strlcpy(dst + dst_len, src, size - dst_len);
 }
 
 export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8 {
@@ -531,11 +565,3 @@ export fn assert(expression: c_int) callconv(.C) void {
         abort();
     }
 }
-
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// TODO: these functions are wrong but help pass libc-tests for now
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-export fn strlcpy() callconv(.C) void {}
-export fn strlcat() callconv(.C) void {}
