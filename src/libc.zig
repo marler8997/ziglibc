@@ -58,6 +58,10 @@ export var errno: c_int = 0;
 // --------------------------------------------------------------------------------
 // stdlib
 // --------------------------------------------------------------------------------
+export fn exit(status: c_int) noreturn {
+    std.os.exit(@intCast(u8, status));
+}
+
 export fn abort() callconv(.C) noreturn {
     @panic("abort");
 }
@@ -126,6 +130,13 @@ export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
     while (true) : (next += 1) {
         if (next[0] == char) return next;
         if (next[0] == 0) return null;
+    }
+}
+export fn memchr(s: [*]const u8, char: c_int, n: usize) callconv(.C) ?[*]const u8 {
+    var i: usize = 0;
+    while (true) : (i += 1) {
+        if (i == n) return null;
+        if (s[i] == char) return s + i;
     }
 }
 
@@ -297,6 +308,11 @@ comptime {
     @export(getc, .{ .name = "fgetc" });
 }
 
+export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
+    _ = char; _ = stream;
+    @panic("ungetc not implemented");
+}
+
 export fn _fread_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
     _ = ptr;
     _ = size;
@@ -401,6 +417,16 @@ export fn fclose(stream: *c.FILE) callconv(.C) c_int {
     return 0;
 }
 
+export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_int {
+    _ = stream; _ = offset; _ = whence;
+    @panic("fseek not implemented");
+}
+
+export fn ftell(stream: *c.FILE) callconv(.C) c_long {
+    _ = stream;
+    @panic("ftell not implemented");
+}
+
 export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (builtin.os.tag == .windows) {
         @panic("fputc not implemented");
@@ -489,6 +515,19 @@ export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) [*]u8 {
     @panic("fgets not implemented");
 }
 
+export fn tmpfile() callconv(.C) *c.FILE {
+    @panic("tmpfile not implemented");
+}
+
+export fn tmpnam(s: [*]u8) callconv(.C) [*]u8 {
+    _ = s;
+    @panic("tmpnam not implemented");
+}
+
+export fn clearerr(stream: *c.FILE) callconv(.C) void {
+    stream.errno = 0;
+}
+
 // NOTE: this is not a libc function, it's exported so it can be used
 //       by vformat in libc.c
 // buf must be at least 100 bytes
@@ -555,6 +594,42 @@ export fn isalnum(char: c_int) callconv(.C) c_int {
 
 export fn toupper(char: c_int) callconv(.C) c_int {
     return std.ascii.toUpper(std.math.cast(u8, char) catch return char);
+}
+
+export fn tolower(char: c_int) callconv(.C) c_int {
+    return std.ascii.toLower(std.math.cast(u8, char) catch return char);
+}
+
+export fn isspace(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isSpace(std.math.cast(u8, char) catch return 0));
+}
+
+export fn isxdigit(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isXDigit(std.math.cast(u8, char) catch return 0));
+}
+
+export fn iscntrl(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isCntrl(std.math.cast(u8, char) catch return 0));
+}
+
+export fn isalpha(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isAlpha(std.math.cast(u8, char) catch return 0));
+}
+
+export fn isgraph(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isGraph(std.math.cast(u8, char) catch return 0));
+}
+
+export fn islower(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isLower(std.math.cast(u8, char) catch return 0));
+}
+
+export fn isupper(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isUpper(std.math.cast(u8, char) catch return 0));
+}
+
+export fn ispunct(char: c_int) callconv(.C) c_int {
+    return @boolToInt(std.ascii.isPunct(std.math.cast(u8, char) catch return 0));
 }
 
 // --------------------------------------------------------------------------------
