@@ -22,8 +22,10 @@ comptime {
 }
 
 const windows = struct {
+    const HANDLE = std.os.windows.HANDLE;
+
     // always sets out_written, even if it returns an error
-    fn writeAll(hFile: std.os.windows.HANDLE, buffer: []const u8, out_written: *usize) error{WriteFailed}!void {
+    fn writeAll(hFile: HANDLE, buffer: []const u8, out_written: *usize) error{WriteFailed}!void {
         var written: usize = 0;
         while (written < buffer.len) {
             const next_write = std.math.cast(u32, buffer.len - written) catch std.math.maxInt(u32);
@@ -37,6 +39,15 @@ const windows = struct {
         }
         out_written.* = written;
     }
+    pub extern "KERNEL32" fn CreateFileA(
+        lpFileName: ?[*:0]const u8,
+        dwDesiredAccess: u32,
+        dwShareMode: u32,
+        lpSecurityAttributes: ?*anyopaque,
+        dwCreationDisposition: u32,
+        dwFlagsAndAttributes: u32,
+        hTemplateFile: ?HANDLE,
+    ) callconv(@import("std").os.windows.WINAPI) ?HANDLE;
 };
 
 // --------------------------------------------------------------------------------
@@ -282,7 +293,37 @@ export fn ferror(stream: *c.FILE) callconv(.C) c_int {
 
 export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
     if (builtin.os.tag == .windows) {
-        @panic("fopen not implemented on windows");
+        var create_disposition: u32 = std.os.windows.OPEN_EXISTING;
+        var access: u32 = 0;
+        for (std.mem.span(mode)) |mode_char| {
+            if (mode_char == 'r') {
+                access |= std.os.windows.GENERIC_READ;
+            } else if (mode_char == 'w') {
+                access |= std.os.windows.GENERIC_WRITE;
+                create_disposition = std.os.windows.CREATE_ALWAYS;
+            } else {
+                std.debug.panic("unhandled open flag '{}' (from '{s}')", .{ mode_char, mode });
+            }
+        }
+        const fd = windows.CreateFileA(
+            filename,
+            access,
+            std.os.windows.FILE_SHARE_DELETE |
+            std.os.windows.FILE_SHARE_READ |
+            std.os.windows.FILE_SHARE_WRITE,
+            null,
+            create_disposition,
+            std.os.windows.FILE_ATTRIBUTE_NORMAL,
+            null,
+        );
+        if (fd == std.os.windows.INVALID_HANDLE_VALUE) {
+            // TODO: do I need to set errno?
+            errno = @enumToInt(std.os.windows.kernel32.GetLastError());
+            return null;
+        }
+        const file = global.reserveFile();
+        file.fd = fd;
+        return file;
     }
 
     var flags: u32 = 0;
@@ -293,7 +334,7 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
         } else if (mode_char == 'w') {
             flags |= std.os.O.WRONLY;
         } else {
-            std.debug.panic("unhandled open flag '{}' (from '{s}')", .{ c, mode });
+            std.debug.panic("unhandled open flag '{}' (from '{s}')", .{ mode_char, mode });
         }
     }
     const fd = std.os.system.open(filename, flags, os_mode);
