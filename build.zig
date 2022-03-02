@@ -74,40 +74,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&exe.step);
         //test_step.dependOn(&run_step.step);
     }
-    {
-        const libc_test_repo = GitRepoStep.create(b, .{
-            .url = "git://nsz.repo.hu:49100/repo/libc-test",
-            .sha = "b7ec467969a53756258778fa7d9b045f912d1c93",
-            .branch = null,
-        });
-        const libc_test_path = libc_test_repo.path;
-        const libc_test_step = b.step("libc-test", "run tests from the libc-test project");
-        {
-            const lib = b.addObject("string", b.pathJoin(&.{libc_test_path, "/src/api/string.c"}));
-            lib.setTarget(target);
-            lib.setBuildMode(mode);
-            lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-            libc_test_step.dependOn(&lib.step);
-        }
-        const libc_inc_path = b.pathJoin(&.{libc_test_path, "src", "common"});
-        const common_src = &[_][]const u8 {
-            b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
-        };
-        {
-            const exe = b.addExecutable("string", b.pathJoin(&.{libc_test_path, "src", "functional", "string.c"}));
-            exe.addCSourceFiles(common_src, &[_][]const u8 {});
-            exe.setTarget(target);
-            exe.setBuildMode(mode);
-            exe.addIncludePath(libc_inc_path);
-            exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-            exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
-            exe.linkLibrary(zig_libc);
-            exe.linkLibrary(zig_start);
-            exe.linkLibrary(zig_lib_posix);
-            libc_test_step.dependOn(&exe.run().step);
-        }
-    }
-
+    addLibcTest(b, target, mode, zig_libc, zig_start, zig_lib_posix);
     _ = addLua(b, target, mode, zig_libc, zig_start);
 }
 
@@ -136,6 +103,49 @@ fn addTest(
         exe.linkSystemLibrary("kernel32");
     }
     return exe;
+}
+
+fn addLibcTest(
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    zig_libc: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
+    zig_lib_posix: *std.build.LibExeObjStep,
+) void {
+    const libc_test_repo = GitRepoStep.create(b, .{
+        .url = "git://nsz.repo.hu:49100/repo/libc-test",
+        .sha = "b7ec467969a53756258778fa7d9b045f912d1c93",
+        .branch = null,
+    });
+    const libc_test_path = libc_test_repo.path;
+    const libc_test_step = b.step("libc-test", "run tests from the libc-test project");
+
+    inline for (.{ "assert", "string" } ) |name| {
+        const lib = b.addObject("libc-test-api-" ++ name, b.pathJoin(&.{libc_test_path, "src", "api", name ++ ".c"}));
+        lib.setTarget(target);
+        lib.setBuildMode(mode);
+        lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+        libc_test_step.dependOn(&lib.step);
+    }
+    const libc_inc_path = b.pathJoin(&.{libc_test_path, "src", "common"});
+    const common_src = &[_][]const u8 {
+        b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
+    };
+
+    inline for (.{ "string" } ) |name| {
+        const exe = b.addExecutable("libc-test-functional-" ++ name, b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}));
+        exe.addCSourceFiles(common_src, &[_][]const u8 {});
+        exe.setTarget(target);
+        exe.setBuildMode(mode);
+        exe.addIncludePath(libc_inc_path);
+        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
+        exe.linkLibrary(zig_libc);
+        exe.linkLibrary(zig_start);
+        exe.linkLibrary(zig_lib_posix);
+        libc_test_step.dependOn(&exe.run().step);
+    }
 }
 
 fn addLua(
