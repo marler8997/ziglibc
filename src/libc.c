@@ -114,18 +114,23 @@ struct BufferWriter {
   struct Writer base;
   char *buf;
   size_t len;
+  char overflow;
 };
 static size_t bufferWrite(struct Writer *base, const char *s, size_t len)
 {
   struct BufferWriter *writer = (struct BufferWriter*)base;
   if (len == 0) len = strlen(s);
-  if (len > writer->len) {
-    fprintf(stderr, "bufferWrite overflow, todo: implement fallback that returns write size\n");
-    return 0;
+
+  if (!writer->overflow) {
+    if (len > writer->len) {
+      // no need to copy more data
+      writer->overflow = 1;
+    } else {
+      memcpy(writer->buf, s, len);
+      writer->buf += len;
+      writer->len -= len;
+    }
   }
-  memcpy(writer->buf, s, len);
-  writer->buf += len;
-  writer->len -= len;
   return len;
 }
 
@@ -135,15 +140,14 @@ int vsnprintf(char * restrict s, size_t n, const char * restrict format, va_list
   writer.base.write = bufferWrite;
   writer.buf = s;
   writer.len = n;
+  writer.overflow = 0;
   size_t written;
-  if (0 == vformat(&written, &writer.base, format, args)) {
-    // TODO: make sure this comparison isn't off by 1
-    if (written < n) {
-      s[written] = 0;
-    }
-    return (int)written;
+  int result = vformat(&written, &writer.base, format, args);
+  assert(result == 0); // vformat can't fail with BufferWriter
+  if (written < n) {
+    s[written] = 0;
   }
-  return -1;
+  return (int)written;
 }
 
 int snprintf(char * restrict s, size_t n, const char * restrict format, ...)

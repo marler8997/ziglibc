@@ -480,6 +480,15 @@ export fn toupper(char: c_int) callconv(.C) c_int {
     return std.ascii.toUpper(std.math.cast(u8, char) catch return char);
 }
 
+// --------------------------------------------------------------------------------
+// assert
+// --------------------------------------------------------------------------------
+export fn assert(expression: c_int) callconv(.C) void {
+    if (expression == 0) {
+        abort();
+    }
+}
+
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // TODO: these functions are wrong but help pass libc-tests for now
