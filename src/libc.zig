@@ -80,15 +80,37 @@ export fn system(string: [*:0]const u8) callconv(.C) c_int {
     @panic("system function not implemented");
 }
 
-export fn realloc(ptr: [*]u8, size: usize) callconv(.C) [*]u8 {
-    _ = ptr;
-    _ = size;
-    @panic("realloc not implemented");
+/// alloc_align is the maximum alignment needed for all types
+/// since malloc is not type aware, it just aligns every allocation
+/// to accomodate the maximum possible alignment that could be needed.
+///
+/// TODO: this should probably be in the zig std library somewhere.
+const alloc_align = 16;
+
+const alloc_metadata_len = std.mem.alignForward(@sizeOf(usize), alloc_align);
+
+export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
+    std.debug.assert(size > 0); // TODO: what should we do in this case?
+    const full_len = alloc_metadata_len + size;
+    const buf = global.gpa.allocator().alignedAlloc(u8, alloc_align, full_len) catch |err| switch (err) {
+        error.OutOfMemory => return null,
+    };
+    @ptrCast(*usize, buf).* = full_len;
+    return @intToPtr([*]align(alloc_align) u8, @ptrToInt(buf.ptr) + alloc_metadata_len);
 }
 
-export fn free(ptr: [*]u8) callconv(.C) void {
-    _ = ptr;
-    @panic("free not implemented");
+export fn realloc(ptr: ?[*]u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
+    const p = ptr orelse return malloc(size);
+    _ = p;
+    @panic("not implemented");
+    //global.gpa.realloc(p);
+}
+
+export fn free(ptr: ?[*]u8) callconv(.C) void {
+    const p = ptr orelse return;
+    const start = @ptrToInt(p) - alloc_metadata_len;
+    const len = @intToPtr(*usize, start).*;
+    global.gpa.allocator().free(@intToPtr([*]u8, start)[0 .. len]);
 }
 
 // --------------------------------------------------------------------------------
@@ -270,6 +292,10 @@ export fn signal(sig: c_int, func: fn (c_int) callconv(.C) void) void {
 // stdio
 // --------------------------------------------------------------------------------
 const global = struct {
+    var gpa = std.heap.GeneralPurposeAllocator(.{
+        .MutexType = std.Thread.Mutex,
+    }){};
+
     var strtok_ptr: ?[*:0]u8 = undefined;
 
     // TODO: remove this global limit on file handles
@@ -654,9 +680,12 @@ export fn mktime(timeptr: *c.tm) callconv(.C) c.time_t {
     @panic("mktime not implemented");
 }
 
-export fn time(timer: *c.time_t) callconv(.C) c.time_t {
-    _ = timer;
-    @panic("time not implemented");
+export fn time(timer: ?*c.time_t) callconv(.C) c.time_t {
+    const now = std.time.timestamp();
+    if (timer) |_| {
+        timer.?.* = now;
+    }
+    return now;
 }
 
 export fn gmtime(timer: *c.time_t) callconv(.C) *c.tm {
