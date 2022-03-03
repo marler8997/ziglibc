@@ -203,6 +203,14 @@ export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     return std.meta.assumeSentinel(s1, 0);
 }
 
+// TODO: find out which standard this function comes from
+export fn strncpy(s1: [*]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*]u8 {
+    const len = strnlen(s2, n);
+    @memcpy(s1, s2, len);
+    @memset(s1 + len, 0, n - len);
+    return s1;
+}
+
 // NOTE: strlcpy and strlcat appear in some libc implementations (rejected by glibc though)
 //       they don't appear to be a part of any standard.
 //       not sure whether they should live in this library or a separate one

@@ -126,6 +126,7 @@ fn addLibcTest(
         lib.setTarget(target);
         lib.setBuildMode(mode);
         lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+        lib.step.dependOn(&libc_test_repo.step);
         libc_test_step.dependOn(&lib.step);
     }
     const libc_inc_path = b.pathJoin(&.{libc_test_path, "src", "common"});
@@ -138,12 +139,18 @@ fn addLibcTest(
         exe.addCSourceFiles(common_src, &[_][]const u8 {});
         exe.setTarget(target);
         exe.setBuildMode(mode);
+        exe.step.dependOn(&libc_test_repo.step);
         exe.addIncludePath(libc_inc_path);
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
         exe.linkLibrary(zig_libc);
         exe.linkLibrary(zig_start);
         exe.linkLibrary(zig_lib_posix);
+        // TODO: should zig_libc and zig_start be able to add library dependencies?
+        if (target.getOs().tag == .windows) {
+            exe.linkSystemLibrary("ntdll");
+            exe.linkSystemLibrary("kernel32");
+        }
         libc_test_step.dependOn(&exe.run().step);
     }
 }
