@@ -99,18 +99,29 @@ export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
     return @intToPtr([*]align(alloc_align) u8, @ptrToInt(buf.ptr) + alloc_metadata_len);
 }
 
-export fn realloc(ptr: ?[*]u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
-    const p = ptr orelse return malloc(size);
-    _ = p;
-    @panic("not implemented");
-    //global.gpa.realloc(p);
+fn getGpaBuf(ptr: [*]u8) []u8 {
+    const start = @ptrToInt(ptr) - alloc_metadata_len;
+    const len = @intToPtr(*usize, start).*;
+    return @intToPtr([*]u8, start)[0 .. len];
 }
 
-export fn free(ptr: ?[*]u8) callconv(.C) void {
+export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
+    const buf = getGpaBuf(ptr orelse return malloc(size));
+    if (size == 0) {
+        global.gpa.allocator().free(buf);
+        return null;
+    }
+    if (size <= buf.len) {
+        const result = global.gpa.allocator().rawResize(buf, alloc_align, size, 1, @returnAddress());
+        std.debug.assert(result == size);
+        return ptr;
+    }
+    @panic("realloc not implemented");
+}
+
+export fn free(ptr: ?[*]align(alloc_align) u8) callconv(.C) void {
     const p = ptr orelse return;
-    const start = @ptrToInt(p) - alloc_metadata_len;
-    const len = @intToPtr(*usize, start).*;
-    global.gpa.allocator().free(@intToPtr([*]u8, start)[0 .. len]);
+    global.gpa.allocator().free(getGpaBuf(p));
 }
 
 // --------------------------------------------------------------------------------
@@ -639,8 +650,10 @@ export fn pow(x: f64, y: f64) callconv(.C) f64 {
 // setjmp
 // --------------------------------------------------------------------------------
 export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
+    // not implemented, but we'll just return success for now
+    // and throw a not-implemented error in longjmp
     _ = env;
-    @panic("setjmp not implemented");
+    return 0;
 }
 
 export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
