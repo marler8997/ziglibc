@@ -8,6 +8,12 @@ const c = @cImport({
     @cInclude("time.h");
 });
 
+fn trace(comptime fmt: []const u8, args: anytype) void {
+    _ = fmt;
+    _ = args;
+    //std.log.scoped(.trace).info(fmt, args);
+}
+
 // __main appears to be a design inherited by LLVM from gcc.
 // it's typically provided by libgcc and is used to call constructors
 fn __main() callconv(.C) void {
@@ -59,16 +65,19 @@ export var errno: c_int = 0;
 // stdlib
 // --------------------------------------------------------------------------------
 export fn exit(status: c_int) noreturn {
+    trace("exit {}", .{status});
     std.os.exit(@intCast(u8, status));
 }
 
 export fn abort() callconv(.C) noreturn {
+    trace("abort", .{});
     @panic("abort");
 }
 
 // TODO: can name be null?
 // TODO: should we detect and do something different if there is a '=' in name?
 export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
+    trace("getenv '{s}'", .{std.mem.span(name)});
     _ = name;
     return null; // not implemented
     //const name_len = std.mem.len(name);
@@ -76,6 +85,7 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
 }
 
 export fn system(string: [*:0]const u8) callconv(.C) c_int {
+    trace("system '{s}'", .{std.mem.span(string)});
     _ = string;
     @panic("system function not implemented");
 }
@@ -90,6 +100,7 @@ const alloc_align = 16;
 const alloc_metadata_len = std.mem.alignForward(@sizeOf(usize), alloc_align);
 
 export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
+    trace("malloc {}", .{size});
     std.debug.assert(size > 0); // TODO: what should we do in this case?
     const full_len = alloc_metadata_len + size;
     const buf = global.gpa.allocator().alignedAlloc(u8, alloc_align, full_len) catch |err| switch (err) {
@@ -106,6 +117,7 @@ fn getGpaBuf(ptr: [*]u8) []u8 {
 }
 
 export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
+    trace("realloc {*} {}", .{ptr, size});
     const buf = getGpaBuf(ptr orelse return malloc(size));
     if (size == 0) {
         global.gpa.allocator().free(buf);
@@ -120,6 +132,7 @@ export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]
 }
 
 export fn free(ptr: ?[*]align(alloc_align) u8) callconv(.C) void {
+    trace("free {*}", .{ptr});
     const p = ptr orelse return;
     global.gpa.allocator().free(getGpaBuf(p));
 }
@@ -128,11 +141,13 @@ export fn free(ptr: ?[*]align(alloc_align) u8) callconv(.C) void {
 // string
 // --------------------------------------------------------------------------------
 export fn strlen(s: [*:0]const u8) callconv(.C) usize {
+    trace("strlen {*}", .{s});
     return std.mem.len(s);
 }
 // TODO: strnlen exists in some libc implementations, it might be defined by posix so
 //       I should probably move it to the posix lib
 fn strnlen(s: [*:0]const u8, max_len: usize) usize {
+    trace("strnlen {*} max={}", .{s, max_len});
     var i: usize = 0;
     while (i < max_len and s[i] != 0) : (i += 1) { }
     return i;
@@ -140,6 +155,7 @@ fn strnlen(s: [*:0]const u8, max_len: usize) usize {
 
 
 export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
+    trace("strcmp {*} {*}", .{a, b});
     var a_next = a;
     var b_next = b;
     while (a_next[0] == b_next[0] and a_next[0] != 0) {
@@ -150,6 +166,7 @@ export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
 }
 
 export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_int {
+    trace("strncmp {*} {*} n={}", .{a, b, n});
     var i: usize = 0;
     while (a[i] == b[i] and a[0] != 0) : (i += 1) {
         if (i == n - 1) return 0;
@@ -164,6 +181,7 @@ export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
 }
 
 export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
+    trace("strchr {*} c='{}'", .{s, char});
     var next = s;
     while (true) : (next += 1) {
         if (next[0] == char) return next;
@@ -171,6 +189,7 @@ export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
     }
 }
 export fn memchr(s: [*]const u8, char: c_int, n: usize) callconv(.C) ?[*]const u8 {
+    trace("memchr {*} c='{}' n={}", .{s, char, n});
     var i: usize = 0;
     while (true) : (i += 1) {
         if (i == n) return null;
@@ -179,6 +198,7 @@ export fn memchr(s: [*]const u8, char: c_int, n: usize) callconv(.C) ?[*]const u
 }
 
 export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
+    trace("strrchr {*} c='{}'", .{s, char});
     var next = s + strlen(s);
     while (true) {
         if (next[0] == char) return next;
@@ -190,6 +210,7 @@ export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
 
 
 export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
+    trace("strstr {*} {*}", .{s1, s2});
     const s2_len = strlen(s2);
     var i: usize = 0;
     while (true) {
@@ -199,12 +220,14 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
 }
 
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
+    trace("strcpy {*} {*}", .{s1, s2});
     @memcpy(s1, s2, std.mem.len(s2) + 1);
     return std.meta.assumeSentinel(s1, 0);
 }
 
 // TODO: find out which standard this function comes from
 export fn strncpy(s1: [*]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*]u8 {
+    trace("strncpy {*} {*} n={}", .{s1, s2, n});
     const len = strnlen(s2, n);
     @memcpy(s1, s2, len);
     @memset(s1 + len, 0, n - len);
@@ -216,6 +239,7 @@ export fn strncpy(s1: [*]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*]u8 {
 //       not sure whether they should live in this library or a separate one
 //       see https://lwn.net/Articles/507319/
 export fn strlcpy(dst: [*]u8, src: [*]const u8, size: usize) callconv(.C) usize {
+    trace("strncpy {*} {*} n={}", .{dst, src, size});
     var i: usize = 0;
     while (true) : (i += 1) {
         if (i == size) {
@@ -230,12 +254,14 @@ export fn strlcpy(dst: [*]u8, src: [*]const u8, size: usize) callconv(.C) usize 
     }
 }
 export fn strlcat(dst: [*:0]u8, src: [*:0]const u8, size: usize) callconv(.C) usize {
+    trace("strlcat {*} {*} n={}", .{dst, src, size});
     const dst_len = strnlen(dst, size);
     if (dst_len == size) return dst_len + strlen(src);
     return dst_len + strlcpy(dst + dst_len, src, size - dst_len);
 }
 
 export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8 {
+    trace("strncat {*} {*} n={}", .{s1, s2, n});
     const dest = s1 + strlen(s1);
     var i: usize = 0;
     while (s2[i] != 0 and i < n) : (i += 1) {
@@ -246,6 +272,7 @@ export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8
 }
 
 export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
+    trace("strspn {*} {*}", .{s1, s2});
     var spn: usize = 0;
     while (true) : (spn += 1) {
         if (s1[spn] == 0 or null == strchr(s2, s1[spn])) return spn;
@@ -253,6 +280,7 @@ export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
 }
 
 export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
+    trace("strcspn {*} {*}", .{s1, s2});
     var spn: usize = 0;
     while (true) : (spn += 1) {
         if (s1[spn] == 0 or null != strchr(s2, s1[spn])) return spn;
@@ -260,6 +288,7 @@ export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
 }
 
 export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*]const u8 {
+    trace("strpbrk {*} {*}", .{s1, s2});
     var next = s1;
     while (true) : (next += 1) {
         if (next[0] == 0) return null;
@@ -268,6 +297,7 @@ export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*]const u
 }
 
 export fn strtok(s1: ?[*:0]u8, s2: [*:0]const u8) callconv(.C) ?[*:0]u8 {
+    trace("strtok {*} {*}", .{s1, s2});
     if (s1 != null) {
         global.strtok_ptr = s1;
     }
@@ -350,17 +380,17 @@ export const stdout: *c.FILE = &global.files[1];
 export const stderr: *c.FILE = &global.files[2];
 
 export fn remove(filename: [*:0]const u8) callconv(.C) c_int {
-    _ = filename;
+    trace("remove '{s}'", .{filename});
     @panic("remove not implemented");
 }
 
 export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
-    _ = old;
-    _ = new;
+    trace("remove '{s}' '{s}'", .{old, new});
     @panic("rename not implemented");
 }
 
 export fn getc(stream: *c.FILE) callconv(.C) c_int {
+    trace("getc {*}", .{stream});
     _ = stream;
     @panic("getc not implemented");
 }
@@ -403,6 +433,7 @@ export fn ferror(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
+    trace("fopen '{s}' mode={s}", .{filename, mode});
     if (builtin.os.tag == .windows) {
         var create_disposition: u32 = std.os.windows.OPEN_EXISTING;
         var access: u32 = 0;
@@ -469,6 +500,7 @@ export fn freopen(filename: [*:0]const u8, mode: [*:0]const u8, stream: *c.FILE)
 }
 
 export fn fclose(stream: *c.FILE) callconv(.C) c_int {
+    trace("fclose {*}", .{stream});
     if (builtin.os.tag == .windows) {
         std.os.close(stream.fd.?);
     } else {
@@ -534,6 +566,7 @@ export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.
 // TODO: can ptr be NULL?
 // TODO: can stream be NULL (I don't think it can)
 export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
+    trace("fwrite {*} size={} n={} stream={*}", .{ptr, size, nmemb, stream});
     const total = size * nmemb;
     const result = _fwrite_buf(ptr, total, stream);
     if (result == total) return nmemb;
@@ -586,6 +619,7 @@ export fn tmpnam(s: [*]u8) callconv(.C) [*]u8 {
 }
 
 export fn clearerr(stream: *c.FILE) callconv(.C) void {
+    trace("clearerr {*}", .{stream});
     stream.errno = 0;
 }
 
@@ -658,6 +692,7 @@ export fn pow(x: f64, y: f64) callconv(.C) f64 {
 // setjmp
 // --------------------------------------------------------------------------------
 export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
+    trace("setjmp", .{});
     // not implemented, but we'll just return success for now
     // and throw a not-implemented error in longjmp
     _ = env;
@@ -665,6 +700,7 @@ export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
 }
 
 export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
+    trace("longjmp {}", .{val});
     _ = env;
     _ = val;
     @panic("longjmp not implemented");
@@ -702,6 +738,7 @@ export fn mktime(timeptr: *c.tm) callconv(.C) c.time_t {
 }
 
 export fn time(timer: ?*c.time_t) callconv(.C) c.time_t {
+    trace("time {*}", .{timer});
     const now = std.time.timestamp();
     if (timer) |_| {
         timer.?.* = now;
@@ -778,6 +815,7 @@ export fn ispunct(char: c_int) callconv(.C) c_int {
 // assert
 // --------------------------------------------------------------------------------
 export fn assert(expression: c_int) callconv(.C) void {
+    trace("assert {}", .{expression});
     if (expression == 0) {
         abort();
     }
