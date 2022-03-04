@@ -104,28 +104,39 @@ export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
     std.debug.assert(size > 0); // TODO: what should we do in this case?
     const full_len = alloc_metadata_len + size;
     const buf = global.gpa.allocator().alignedAlloc(u8, alloc_align, full_len) catch |err| switch (err) {
-        error.OutOfMemory => return null,
+        error.OutOfMemory => {
+            trace("malloc return null", .{});
+            return null;
+        },
     };
     @ptrCast(*usize, buf).* = full_len;
-    return @intToPtr([*]align(alloc_align) u8, @ptrToInt(buf.ptr) + alloc_metadata_len);
+    const result = @intToPtr([*]align(alloc_align) u8, @ptrToInt(buf.ptr) + alloc_metadata_len);
+    trace("malloc return {*}", .{result});
+    return result;
 }
 
-fn getGpaBuf(ptr: [*]u8) []u8 {
+fn getGpaBuf(ptr: [*]u8) []align(alloc_align) u8 {
     const start = @ptrToInt(ptr) - alloc_metadata_len;
     const len = @intToPtr(*usize, start).*;
-    return @intToPtr([*]u8, start)[0 .. len];
+    return @alignCast(alloc_align, @intToPtr([*]u8, start)[0 .. len]);
 }
 
 export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
     trace("realloc {*} {}", .{ptr, size});
-    const buf = getGpaBuf(ptr orelse return malloc(size));
+    const buf = getGpaBuf(ptr orelse {
+        const result = malloc(size);
+        trace("realloc return {*} (from malloc)", .{result});
+        return result;
+    });
     if (size == 0) {
         global.gpa.allocator().free(buf);
+        trace("realloc return null", .{});
         return null;
     }
     if (size <= buf.len) {
         const result = global.gpa.allocator().rawResize(buf, alloc_align, size, 1, @returnAddress());
         std.debug.assert(result == size);
+        trace("realloc return {*}", .{ptr});
         return ptr;
     }
     @panic("realloc not implemented");
@@ -141,8 +152,10 @@ export fn free(ptr: ?[*]align(alloc_align) u8) callconv(.C) void {
 // string
 // --------------------------------------------------------------------------------
 export fn strlen(s: [*:0]const u8) callconv(.C) usize {
-    trace("strlen {*}", .{s});
-    return std.mem.len(s);
+    trace("strlen {}", .{fmtTraceStr(s)});
+    const result = std.mem.len(s);
+    trace("strlen return {}", .{result});
+    return result;
 }
 // TODO: strnlen exists in some libc implementations, it might be defined by posix so
 //       I should probably move it to the posix lib
@@ -150,19 +163,75 @@ fn strnlen(s: [*:0]const u8, max_len: usize) usize {
     trace("strnlen {*} max={}", .{s, max_len});
     var i: usize = 0;
     while (i < max_len and s[i] != 0) : (i += 1) { }
+    trace("strnlen return {}", .{i});
     return i;
 }
 
+fn fmtTraceStr(s: anytype) FmtTraceStr {
+    switch (@typeInfo(@TypeOf(s))) {
+        .Pointer => |info| switch (info.size) {
+            .Slice => return FmtTraceStr.initSlice(s),
+            .Many => if (info.sentinel) |_| {
+                return FmtTraceStr.initSentinel(s);
+            },
+            else => {},
+        },
+        else => {},
+    }
+    @compileError("fmtTraceStr for type " ++ @typeName(@TypeOf(s)) ++ " is not implemented");
+}
+const FmtTraceStr = struct {
+    const max_str_len = 20;
+
+    ptr: [*]const u8,
+    len: union(enum) {
+        full: u8,
+        truncated: void,
+    },
+
+    pub fn initSlice(s: []const u8) FmtTraceStr {
+        if (s.len > max_str_len) {
+            return .{ .ptr = s.ptr, .len = .truncated };
+        }
+        return .{ .ptr = s.ptr, .len = .{ .len = @intCast(u8, s.len) } };
+    }
+
+    pub fn initSentinel(s: [*:0]const u8) FmtTraceStr {
+        var len: u8 = 0;
+        while (len <= max_str_len) : (len += 1) {
+            if (s[len] == 0)
+                return .{ .ptr = s, .len = .{ .full = len } };
+        }
+        return .{ .ptr = s, .len = .truncated };
+    }
+
+    pub fn format(
+        self: @This(),
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) @TypeOf(writer).Error!void {
+        _ = fmt;
+        _ = options;
+        const part: struct { s_len: u8, suffix: []const u8 } = switch (self.len) {
+            .full => |len| .{ .s_len = len, .suffix = "" },
+            .truncated => .{ .s_len = max_str_len - 3, .suffix = "..." },
+        };
+        try writer.print("{*} \"{}\"{s}", .{self.ptr, std.zig.fmtEscapes(self.ptr[0 .. part.s_len]), part.suffix});
+    }
+};
 
 export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
-    trace("strcmp {*} {*}", .{a, b});
+    trace("strcmp {} {}", .{fmtTraceStr(a), fmtTraceStr(b)});
     var a_next = a;
     var b_next = b;
     while (a_next[0] == b_next[0] and a_next[0] != 0) {
         a_next += 1;
         b_next += 1;
     }
-    return @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
+    const result = @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
+    trace("strcmp return {}", .{result});
+    return result;
 }
 
 export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_int {
@@ -181,7 +250,7 @@ export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
 }
 
 export fn strchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
-    trace("strchr {*} c='{}'", .{s, char});
+    trace("strchr {} c='{}'", .{fmtTraceStr(s), char});
     var next = s;
     while (true) : (next += 1) {
         if (next[0] == char) return next;
@@ -198,7 +267,7 @@ export fn memchr(s: [*]const u8, char: c_int, n: usize) callconv(.C) ?[*]const u
 }
 
 export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
-    trace("strrchr {*} c='{}'", .{s, char});
+    trace("strrchr {} c='{}'", .{fmtTraceStr(s), char});
     var next = s + strlen(s);
     while (true) {
         if (next[0] == char) return next;
@@ -210,7 +279,7 @@ export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
 
 
 export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
-    trace("strstr {*} {*}", .{s1, s2});
+    trace("strstr {} {}", .{fmtTraceStr(s1), fmtTraceStr(s2)});
     const s2_len = strlen(s2);
     var i: usize = 0;
     while (true) {
@@ -227,7 +296,7 @@ export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
 
 // TODO: find out which standard this function comes from
 export fn strncpy(s1: [*]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*]u8 {
-    trace("strncpy {*} {*} n={}", .{s1, s2, n});
+    trace("strncpy {*} {} n={}", .{s1, fmtTraceStr(s2), n});
     const len = strnlen(s2, n);
     @memcpy(s1, s2, len);
     @memset(s1 + len, 0, n - len);
@@ -254,14 +323,14 @@ export fn strlcpy(dst: [*]u8, src: [*]const u8, size: usize) callconv(.C) usize 
     }
 }
 export fn strlcat(dst: [*:0]u8, src: [*:0]const u8, size: usize) callconv(.C) usize {
-    trace("strlcat {*} {*} n={}", .{dst, src, size});
+    trace("strlcat {} {} n={}", .{fmtTraceStr(dst), fmtTraceStr(src), size});
     const dst_len = strnlen(dst, size);
     if (dst_len == size) return dst_len + strlen(src);
     return dst_len + strlcpy(dst + dst_len, src, size - dst_len);
 }
 
 export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8 {
-    trace("strncat {*} {*} n={}", .{s1, s2, n});
+    trace("strncat {} {} n={}", .{fmtTraceStr(s1), fmtTraceStr(s2), n});
     const dest = s1 + strlen(s1);
     var i: usize = 0;
     while (s2[i] != 0 and i < n) : (i += 1) {
@@ -272,7 +341,7 @@ export fn strncat(s1: [*:0]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*:0]u8
 }
 
 export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
-    trace("strspn {*} {*}", .{s1, s2});
+    trace("strspn {} {}", .{fmtTraceStr(s1), fmtTraceStr(s2)});
     var spn: usize = 0;
     while (true) : (spn += 1) {
         if (s1[spn] == 0 or null == strchr(s2, s1[spn])) return spn;
@@ -280,7 +349,7 @@ export fn strspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
 }
 
 export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
-    trace("strcspn {*} {*}", .{s1, s2});
+    trace("strcspn {} {}", .{fmtTraceStr(s1), fmtTraceStr(s2)});
     var spn: usize = 0;
     while (true) : (spn += 1) {
         if (s1[spn] == 0 or null != strchr(s2, s1[spn])) return spn;
@@ -288,7 +357,7 @@ export fn strcspn(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) usize {
 }
 
 export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*]const u8 {
-    trace("strpbrk {*} {*}", .{s1, s2});
+    trace("strpbrk {} {}", .{fmtTraceStr(s1), fmtTraceStr(s2)});
     var next = s1;
     while (true) : (next += 1) {
         if (next[0] == 0) return null;
@@ -297,9 +366,11 @@ export fn strpbrk(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*]const u
 }
 
 export fn strtok(s1: ?[*:0]u8, s2: [*:0]const u8) callconv(.C) ?[*:0]u8 {
-    trace("strtok {*} {*}", .{s1, s2});
     if (s1 != null) {
+        trace("strtok {} {}", .{fmtTraceStr(s1.?), fmtTraceStr(s2)});
         global.strtok_ptr = s1;
+    } else {
+        trace("strtok NULL {}", .{fmtTraceStr(s2)});
     }
     var next = global.strtok_ptr.?;
     next += strspn(next, s2);
@@ -429,6 +500,7 @@ export fn feof(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn ferror(stream: *c.FILE) callconv(.C) c_int {
+    trace("ferror {*} return {}", .{stream, stream.errno});
     return stream.errno;
 }
 
@@ -521,6 +593,7 @@ export fn ftell(stream: *c.FILE) callconv(.C) c_long {
 }
 
 export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
+    trace("fputc {} stream={*}", .{character, stream});
     if (builtin.os.tag == .windows) {
         @panic("fputc not implemented");
     }
@@ -574,15 +647,18 @@ export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) c
 }
 
 export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
+    trace("fflush {*}", .{stream});
     _ = stream;
     return 0; // no-op since there's no buffering right now
 }
 
 export fn puts(s: [*:0]const u8) callconv(.C) c_int {
+    trace("puts '{}'", .{fmtTraceStr(s)});
     return fputs(s, stdout);
 }
 
 export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
+    trace("fputs '{}' stream={*}", .{fmtTraceStr(s), stream});
     // NOTE: this is inneficient
     //       Maybe I could do a writev?
     //       Or maybe I could make 2 write calls with a locking mechanism?
@@ -743,6 +819,7 @@ export fn time(timer: ?*c.time_t) callconv(.C) c.time_t {
     if (timer) |_| {
         timer.?.* = now;
     }
+    trace("time return {}", .{now});
     return now;
 }
 
@@ -768,46 +845,57 @@ export fn strftime(s: [*]u8, maxsize: usize, format: [*:0]const u8, timeptr: *co
 // ctype
 // --------------------------------------------------------------------------------
 export fn isalnum(char: c_int) callconv(.C) c_int {
+    trace("isalnum {}", .{char});
     return @boolToInt(std.ascii.isAlNum(std.math.cast(u8, char) catch return 0));
 }
 
 export fn toupper(char: c_int) callconv(.C) c_int {
+    trace("toupper {}", .{char});
     return std.ascii.toUpper(std.math.cast(u8, char) catch return char);
 }
 
 export fn tolower(char: c_int) callconv(.C) c_int {
+    trace("tolower {}", .{char});
     return std.ascii.toLower(std.math.cast(u8, char) catch return char);
 }
 
 export fn isspace(char: c_int) callconv(.C) c_int {
+    trace("isspace {}", .{char});
     return @boolToInt(std.ascii.isSpace(std.math.cast(u8, char) catch return 0));
 }
 
 export fn isxdigit(char: c_int) callconv(.C) c_int {
+    trace("isxdigit {}", .{char});
     return @boolToInt(std.ascii.isXDigit(std.math.cast(u8, char) catch return 0));
 }
 
 export fn iscntrl(char: c_int) callconv(.C) c_int {
+    trace("iscntrl {}", .{char});
     return @boolToInt(std.ascii.isCntrl(std.math.cast(u8, char) catch return 0));
 }
 
 export fn isalpha(char: c_int) callconv(.C) c_int {
+    trace("isalhpa {}", .{char});
     return @boolToInt(std.ascii.isAlpha(std.math.cast(u8, char) catch return 0));
 }
 
 export fn isgraph(char: c_int) callconv(.C) c_int {
+    trace("isgraph {}", .{char});
     return @boolToInt(std.ascii.isGraph(std.math.cast(u8, char) catch return 0));
 }
 
 export fn islower(char: c_int) callconv(.C) c_int {
+    trace("islower {}", .{char});
     return @boolToInt(std.ascii.isLower(std.math.cast(u8, char) catch return 0));
 }
 
 export fn isupper(char: c_int) callconv(.C) c_int {
+    trace("isupper {}", .{char});
     return @boolToInt(std.ascii.isUpper(std.math.cast(u8, char) catch return 0));
 }
 
 export fn ispunct(char: c_int) callconv(.C) c_int {
+    trace("ispunct {}", .{char});
     return @boolToInt(std.ascii.isPunct(std.math.cast(u8, char) catch return 0));
 }
 
