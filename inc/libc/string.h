@@ -32,4 +32,9 @@ size_t strlen(const char *s);
 //       so I'm just inluding it for now.
 char* strsignal(int);
 
+// NOTE: it looks like strdup is defined by posix (not libc)
+//       but it needs to be in string.h defined by libc (not posix)
+//       so for now I'm just including it here
+char *strdup(const char *s);
+
 #endif /* _STRING_H */

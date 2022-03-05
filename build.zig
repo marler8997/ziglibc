@@ -76,6 +76,7 @@ pub fn build(b: *std.build.Builder) void {
     }
     addLibcTest(b, target, mode, zig_libc, zig_start, zig_lib_posix);
     _ = addLua(b, target, mode, zig_libc, zig_start);
+    _ = addCmph(b, target, mode, zig_libc, zig_start);
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
@@ -197,4 +198,57 @@ fn addLua(
     step.dependOn(&lua_exe.install_step.?.step);
 
     return lua_exe;
+}
+
+fn addCmph(
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    zig_libc: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
+) *std.build.LibExeObjStep {
+    const repo = GitRepoStep.create(b, .{
+        //.url = "https://git.code.sf.net/p/cmph/git",
+        .url = "https://github.com/bonitao/cmph",
+        .sha = "abd5e1e17e4d51b3e24459ab9089dc0522846d0d",
+        .branch = null,
+    });
+
+    const config_step = b.addWriteFile(
+        b.pathJoin(&.{repo.path, "src", "config.h"}),
+        "#define VERSION \"1.0\"",
+    );
+    config_step.step.dependOn(&repo.step);
+
+    const exe = b.addExecutable("cmph", null);
+    exe.setTarget(target);
+    exe.setBuildMode(mode);
+    exe.step.dependOn(&repo.step);
+    exe.step.dependOn(&config_step.step);
+    const repo_path = repo.getPath(&exe.step);
+    var files = std.ArrayList([]const u8).init(b.allocator);
+    const sources = [_][]const u8 {
+        "main.c", "cmph.c", "hash.c", "chm.c", "bmz.c", "bmz8.c", "brz.c", "fch.c",
+        "bdz.c", "bdz_ph.c", "chd_ph.c", "chd.c", "jenkins_hash.c", "graph.c", "vqueue.c",
+        "buffer_manager.c", "fch_buckets.c", "miller_rabin.c", "compressed_seq.c",
+        "compressed_rank.c", "buffer_entry.c", "select.c", "cmph_structs.c",
+    };
+    for (sources) |src| {
+        files.append(b.pathJoin(&.{repo_path, "src", src})) catch unreachable;
+    }
+
+    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+        "-std=c11",
+    });
+
+    exe.addIncludePath("inc/libc");
+    exe.addIncludePath("inc/posix");
+    exe.addIncludePath("inc/gnu");
+    exe.linkLibrary(zig_libc);
+    exe.linkLibrary(zig_start);
+
+    const step = b.step("cmph", "build the cmph tool");
+    step.dependOn(&exe.step);
+
+    return exe;
 }

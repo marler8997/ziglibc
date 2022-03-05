@@ -1,8 +1,6 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
-extern char *optarg;
-extern int opterr, optind, optopt;
-int getopt(int, char * const [], const char *);
+#incldue "private/getopt.h"
 
 #endif /* _UNISTD_H */

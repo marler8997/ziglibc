@@ -4,10 +4,10 @@
 #include "private/null.h"
 #include "private/sizet.h"
 #include "private/fixedwidthints.h"
+#include "private/timet.h"
 
 // CLK_TCK
 typedef long clock_t;
-typedef int64_t time_t;
 struct tm {
     int tm_sec;   /*  seconds after the minute --- [0, 60] */
     int tm_min;   /*  minutes after the hour --- [0, 59] */
