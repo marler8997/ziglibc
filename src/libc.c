@@ -110,15 +110,15 @@ int printf(const char *format, ...)
   return result;
 }
 
-struct BufferWriter {
+struct BoundedBufferWriter {
   struct Writer base;
   char *buf;
   size_t len;
   char overflow;
 };
-static size_t bufferWrite(struct Writer *base, const char *s, size_t len)
+static size_t boundedBufferWrite(struct Writer *base, const char *s, size_t len)
 {
-  struct BufferWriter *writer = (struct BufferWriter*)base;
+  struct BoundedBufferWriter *writer = (struct BoundedBufferWriter*)base;
   if (len == 0) len = strlen(s);
 
   if (!writer->overflow) {
@@ -136,14 +136,14 @@ static size_t bufferWrite(struct Writer *base, const char *s, size_t len)
 
 int vsnprintf(char * restrict s, size_t n, const char * restrict format, va_list args)
 {
-  struct BufferWriter writer;
-  writer.base.write = bufferWrite;
+  struct BoundedBufferWriter writer;
+  writer.base.write = boundedBufferWrite;
   writer.buf = s;
   writer.len = n;
   writer.overflow = 0;
   size_t written;
   int result = vformat(&written, &writer.base, format, args);
-  assert(result == 0); // vformat can't fail with BufferWriter
+  assert(result == 0); // vformat can't fail with BoundedBufferWriter
   if (written < n) {
     s[written] = 0;
   }
@@ -155,6 +155,39 @@ int snprintf(char * restrict s, size_t n, const char * restrict format, ...)
   va_list args;
   va_start(args, format);
   int result = vsnprintf(s, n, format, args);
+  va_end(args);
+  return result;
+}
+
+struct UnboundedBufferWriter {
+  struct Writer base;
+  char *buf;
+};
+static size_t unboundedBufferWrite(struct Writer *base, const char *s, size_t len)
+{
+  struct UnboundedBufferWriter *writer = (struct UnboundedBufferWriter*)base;
+  memcpy(writer->buf, s, len);
+  writer->buf += len;
+  return len;
+}
+
+int vsprintf(char * restrict s, const char * restrict format, va_list args)
+{
+  struct UnboundedBufferWriter writer;
+  writer.base.write = unboundedBufferWrite;
+  writer.buf = s;
+  size_t written;
+  int result = vformat(&written, &writer.base, format, args);
+  assert(result == 0); // vformat can't fail with BufferWriter
+  s[written] = 0;
+  return (int)written;
+}
+
+int sprintf(char *s, const char * restrict format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  int result = vsprintf(s, format, args);
   va_end(args);
   return result;
 }

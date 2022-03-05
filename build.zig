@@ -76,7 +76,7 @@ pub fn build(b: *std.build.Builder) void {
     }
     addLibcTest(b, target, mode, zig_libc, zig_start, zig_lib_posix);
     _ = addLua(b, target, mode, zig_libc, zig_start);
-    _ = addCmph(b, target, mode, zig_libc, zig_start);
+    _ = addCmph(b, target, mode, zig_libc, zig_start, zig_lib_posix);
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
@@ -206,6 +206,7 @@ fn addCmph(
     mode: anytype,
     zig_libc: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
+    zig_posix: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
     const repo = GitRepoStep.create(b, .{
         //.url = "https://git.code.sf.net/p/cmph/git",
@@ -223,6 +224,7 @@ fn addCmph(
     const exe = b.addExecutable("cmph", null);
     exe.setTarget(target);
     exe.setBuildMode(mode);
+    exe.install();
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
     const repo_path = repo.getPath(&exe.step);
@@ -246,9 +248,10 @@ fn addCmph(
     exe.addIncludePath("inc/gnu");
     exe.linkLibrary(zig_libc);
     exe.linkLibrary(zig_start);
+    exe.linkLibrary(zig_posix);
 
     const step = b.step("cmph", "build the cmph tool");
-    step.dependOn(&exe.step);
+    step.dependOn(&exe.install_step.?.step);
 
     return exe;
 }
