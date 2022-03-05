@@ -66,13 +66,23 @@ pub fn build(b: *std.build.Builder) void {
     {
         const exe = addTest("getopt", b, target, mode, zig_libc, zig_start);
         addPosix(exe, zig_lib_posix);
-        const run_step = exe.run();
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
-        // NOTE: just build for now, until I implement getopt
-        test_step.dependOn(&exe.step);
-        //test_step.dependOn(&run_step.step);
+        {
+            const run = exe.run();
+            run.stdout_action = .{ .expect_exact = "aflag=0, c_arg='(null)'\n" };
+            test_step.dependOn(&run.step);
+        }
+        {
+            const run = exe.run();
+            run.addArgs(&.{ "-a" });
+            run.stdout_action = .{ .expect_exact = "aflag=1, c_arg='(null)'\n" };
+            test_step.dependOn(&run.step);
+        }
+        {
+            const run = exe.run();
+            run.addArgs(&.{ "-c", "hello" });
+            run.stdout_action = .{ .expect_exact = "aflag=0, c_arg='hello'\n" };
+            test_step.dependOn(&run.step);
+        }
     }
     addLibcTest(b, target, mode, zig_libc, zig_start, zig_lib_posix);
     _ = addLua(b, target, mode, zig_libc, zig_start);

@@ -20,7 +20,7 @@ pub fn fmtStr(s: anytype) FmtStr {
     @compileError("fmtStr for type " ++ @typeName(@TypeOf(s)) ++ " is not implemented");
 }
 const FmtStr = struct {
-    const max_str_len = 20;
+    const max_str_len = 26;
 
     ptr: [*]const u8,
     len: union(enum) {

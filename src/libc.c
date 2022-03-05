@@ -36,6 +36,8 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
     fmt = next_percent_char + 1;
     if (fmt[0] == 's') {
       const char *s = va_arg(args, const char *);
+      // TODO: is this how we should be handling NULL string pointers?
+      if (s == NULL) s = "(null)";
       size_t written = writer->write(writer, s, 0);
       *out_written += written;
       if (s[written] != 0) return -1; // error

@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 const c = struct {
@@ -5,8 +6,18 @@ const c = struct {
 };
 
 pub fn main() u8 {
-    var args: [0:null]?[*:0]u8 = [0:null]?[*:0]u8{};
-    var result = c.main(0, &args);
+    var argc: c_int = undefined;
+    const args: [*:null]?[*:0]u8 = blk: {
+        if (builtin.os.tag == .windows) {
+            std.log.warn("command-line args not implemented on Windows!", .{});
+            argc = 0;
+            break :blk *[0:null]?[*:0]u8{};
+        }
+        argc = @intCast(c_int, std.os.argv.len);
+        break :blk @ptrCast([*:null]?[*:0]u8, std.os.argv.ptr);
+    };
+
+    var result = c.main(argc, args);
     if (result != 0) {
         while ((result & 0xff == 0)) result = result >> 8;
     }
