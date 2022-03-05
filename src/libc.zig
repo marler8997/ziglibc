@@ -394,9 +394,9 @@ const global = struct {
     const max_file_count = 100;
     var files_reserved: [max_file_count]bool = [_]bool{false} ** max_file_count;
     var files: [max_file_count]c.FILE = [_]c.FILE{
-        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO, .errno = undefined },
-        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO, .errno = undefined },
-        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO, .eof = 0, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO, .eof = 0, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO, .eof = 0, .errno = undefined },
     } ++ ([_]c.FILE{undefined} ** (max_file_count - 3));
 
     fn reserveFile() *c.FILE {
@@ -430,9 +430,17 @@ export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
 }
 
 export fn getc(stream: *c.FILE) callconv(.C) c_int {
+    if (stream.eof != 0) @panic("getc, eof not 0 not implemented");
     trace.log("getc {*}", .{stream});
-    _ = stream;
-    @panic("getc not implemented");
+    var buf: [1]u8 = undefined;
+    const rc = std.os.system.read(stream.fd, &buf, 1);
+    if (rc == 1) {
+        trace.log("getc return {}", .{buf[0]});
+        return buf[0];
+    }
+    stream.errno = if (rc == 0) 0 else @enumToInt(std.os.errno(rc));
+    trace.log("getc return EOF, errno={}", .{stream.errno});
+    return c.EOF;
 }
 
 comptime {
@@ -440,6 +448,7 @@ comptime {
 }
 
 export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
+    if (stream.eof != 0) @panic("ungetc, eof not 0 not implemented");
     _ = char; _ = stream;
     @panic("ungetc not implemented");
 }
@@ -452,6 +461,7 @@ export fn _fread_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C
 }
 
 export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
+    if (stream.eof != 0) @panic("fread, eof not 0 not implemented");
     const total = size * nmemb;
     const result = _fread_buf(ptr, total, stream);
     // TODO: if length read is not aligned then we need to leave it
@@ -464,8 +474,7 @@ export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *c.FILE) callconv
 }
 
 export fn feof(stream: *c.FILE) callconv(.C) c_int {
-    _ = stream;
-    @panic("feof not implemented");
+    return stream.eof;
 }
 
 export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
@@ -501,6 +510,7 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
         }
         const file = global.reserveFile();
         file.fd = fd;
+        file.eof = 0;
         return file;
     }
 
@@ -525,6 +535,7 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
     }
     const file = global.reserveFile();
     file.fd = @intCast(c_int, fd);
+    file.eof = 0;
     return file;
 }
 
@@ -547,8 +558,16 @@ export fn fclose(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_int {
-    _ = stream; _ = offset; _ = whence;
-    @panic("fseek not implemented");
+    // TODO: update eof when applicable
+    trace.log("fseek {*} offset={} whence={}", .{stream, offset, whence});
+    const rc = std.os.system.lseek(stream.fd, @intCast(i64, offset), @intCast(usize, whence));
+    switch (std.os.errno(rc)) {
+        .SUCCESS => return 0,
+        else => |e| {
+            errno = @enumToInt(e);
+            return -1;
+        }
+    }
 }
 
 export fn ftell(stream: *c.FILE) callconv(.C) c_long {
@@ -558,9 +577,11 @@ export fn ftell(stream: *c.FILE) callconv(.C) c_long {
 
 export fn rewind(stream: *c.FILE) callconv(.C) void {
     trace.log("rewind {*}", .{stream});
-    // TODO: what if fseek fails?
-    _ = fseek(stream, 0, c.SEEK_SET);
-    stream.errno = 0;
+    if (0 == fseek(stream, 0, c.SEEK_SET)) {
+        stream.eof = 0;
+        stream.errno = 0;
+    }
+    // TODO: should we set stream.errno if fseek failed?
 }
 
 export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
@@ -649,11 +670,30 @@ export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
     return if (written == 0) c.EOF else 1;
 }
 
-export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) [*]u8 {
-    _ = s;
-    _ = n;
-    _ = stream;
-    @panic("fgets not implemented");
+export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) ?[*]u8 {
+    if (stream.eof != 0) return null;
+
+    var total_read: usize = 0;
+    while (true) : (total_read += 1) {
+        if (total_read + 1 >= n) {
+            s[total_read] = 0;
+            return s;
+        }
+        stream.errno = 0;
+        const result = getc(stream);
+        if (result == c.EOF) {
+            if (stream.errno == 0) {
+                s[total_read] = 0;
+                return s;
+            }
+            return null;
+        }
+        s[total_read] = @intCast(u8, result);
+        if (s[total_read] == '\n') {
+            s[total_read + 1] = 0;
+            return s;
+        }
+    }
 }
 
 export fn tmpfile() callconv(.C) *c.FILE {

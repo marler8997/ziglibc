@@ -15,12 +15,13 @@
 #define SEEK_END 2
 
 typedef struct {
-  int errno;
 #ifdef _WIN32
   void* fd;
 #else
   int fd;
 #endif
+  int errno;
+  int eof;
 } FILE;
 
 typedef size_t fpos_t;
