@@ -683,8 +683,11 @@ export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) ?[*]u8 {
         const result = getc(stream);
         if (result == c.EOF) {
             if (stream.errno == 0) {
-                s[total_read] = 0;
-                return s;
+                stream.eof = 1;
+                if (total_read > 0) {
+                    s[total_read] = 0;
+                    return s;
+                }
             }
             return null;
         }
