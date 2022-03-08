@@ -362,7 +362,9 @@ export fn strtoul(nptr: [*:0]const u8, endptr: ?*[*]u8, base: c_int) callconv(.C
 }
 
 export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
-    std.debug.panic("strerror (num={}) not implemented", .{errnum});
+    std.log.warn("sterror (num={}) not implemented", .{errnum});
+    _ = std.fmt.bufPrint(&global.tmp_strerror_buffer, "{}", .{errnum}) catch @panic("BUG");
+    return std.meta.assumeSentinel(&global.tmp_strerror_buffer, 0);
 }
 
 
@@ -414,6 +416,9 @@ const global = struct {
             std.debug.panic("released FILE (i={} ptr={*}) that was not reserved", .{ i, file });
         }
     }
+
+    // TODO: remove this.  Just using it to return error numbers as strings for now
+    var tmp_strerror_buffer: [30]u8 = undefined;
 };
 export const stdin: *c.FILE = &global.files[0];
 export const stdout: *c.FILE = &global.files[1];
@@ -453,24 +458,44 @@ export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
     @panic("ungetc not implemented");
 }
 
-export fn _fread_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
-    _ = ptr;
-    _ = size;
-    _ = stream;
-    @panic("_fread_buf not implemented");
+export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usize {
+    // TODO: should I check stream.eof here?
+
+    if (builtin.os.tag == .windows) {
+        @panic("_fread_buf not implemented for Windows");
+    }
+
+    // Prevents EINVAL.
+    const max_count = switch (builtin.os.tag) {
+        .linux => 0x7ffff000,
+        .macos, .ios, .watchos, .tvos => std.math.maxInt(i32),
+        else => std.math.maxInt(isize),
+    };
+    const adjusted_len = @minimum(max_count, size);
+
+    const rc = std.os.system.read(stream.fd, ptr, adjusted_len);
+    switch (std.os.errno(rc)) {
+        .SUCCESS => {
+            if (rc == 0) stream.eof = 1;
+            return @intCast(usize, rc);
+        },
+        else => |e| {
+            errno = @enumToInt(e);
+            return 0;
+        },
+    }
 }
 
 export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
     if (stream.eof != 0) @panic("fread, eof not 0 not implemented");
     const total = size * nmemb;
     const result = _fread_buf(ptr, total, stream);
+    if (result == 0) return 0;
+    if (result == total) return nmemb;
     // TODO: if length read is not aligned then we need to leave it
-    //       in an interal read buffer inside FILE
-    _ = result;
-    @panic("fread not implemented");
-    //if (result == total) return nmemb;
-    //return result / size;
-    //return _fread_buf(ptr,
+    //       in an internal read buffer inside FILE
+    //       for now we'll crash if it's not aligned
+    return @divExact(result, size);
 }
 
 export fn feof(stream: *c.FILE) callconv(.C) c_int {
@@ -488,8 +513,10 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
             } else if (mode_char == 'w') {
                 access |= std.os.windows.GENERIC_WRITE;
                 create_disposition = std.os.windows.CREATE_ALWAYS;
+            } else if (mode_char == 'b') {
+                // not really sure what this is supposed to do yet, ignore it for now
             } else {
-                std.debug.panic("unhandled open flag '{}' (from '{s}')", .{ mode_char, mode });
+                std.debug.panic("unhandled open flag '{c}' (from '{s}')", .{ mode_char, mode });
             }
         }
         const fd = windows.CreateFileA(
@@ -521,8 +548,10 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
             flags |= std.os.O.RDONLY;
         } else if (mode_char == 'w') {
             flags |= std.os.O.WRONLY;
+        } else if (mode_char == 'b') {
+            // not really sure what this is supposed to do yet, ignore it for now
         } else {
-            std.debug.panic("unhandled open flag '{}' (from '{s}')", .{ mode_char, mode });
+            std.debug.panic("unhandled open flag '{c}' (from '{s}')", .{ mode_char, mode });
         }
     }
     const fd = std.os.system.open(filename, flags, os_mode);
@@ -673,6 +702,7 @@ export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
 export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) ?[*]u8 {
     if (stream.eof != 0) return null;
 
+    // TODO: this implementation is very slow/inefficient
     var total_read: usize = 0;
     while (true) : (total_read += 1) {
         if (total_read + 1 >= n) {
