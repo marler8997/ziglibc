@@ -437,6 +437,11 @@ export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
 export fn getc(stream: *c.FILE) callconv(.C) c_int {
     if (stream.eof != 0) @panic("getc, eof not 0 not implemented");
     trace.log("getc {*}", .{stream});
+
+    if (builtin.os.tag == .windows) {
+        @panic("getc not implemented on Windows");
+    }
+
     var buf: [1]u8 = undefined;
     const rc = std.os.system.read(stream.fd, &buf, 1);
     if (rc == 1) {
@@ -589,6 +594,11 @@ export fn fclose(stream: *c.FILE) callconv(.C) c_int {
 export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_int {
     // TODO: update eof when applicable
     trace.log("fseek {*} offset={} whence={}", .{stream, offset, whence});
+
+    if (builtin.os.tag == .windows) {
+        @panic("fseek not implemented on Windows");
+    }
+
     const rc = std.os.system.lseek(stream.fd, @intCast(i64, offset), @intCast(usize, whence));
     switch (std.os.errno(rc)) {
         .SUCCESS => return 0,

@@ -35,4 +35,21 @@ const char *format, const struct tm *timeptr);
     #define CLOCKS_PER_SEC 1000000L
 #endif
 
+#if __STDC_VERSION__ >= 201112L
+    #define TIME_UTC 1
+    struct timespec {
+        time_t tv_sec; // whole seconds >= 0
+        long tv_nsec; // nanoseconds [0,999999999]
+    };
+#endif
+
+// NOTE: it looks like the definitions in this block are defined by posix (not libc)
+//       but they need to be in time.h defined by libc (not posix)
+//       so for now I'm just including it here
+#if 1
+    typedef int clockid_t;
+    #define CLOCK_REALTIME 0
+    int clock_gettime(clockid_t clk_id, struct timespec *tp);
+#endif
+
 #endif /* _TIME_H */

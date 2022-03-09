@@ -145,7 +145,7 @@ fn addLibcTest(
         b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
     };
 
-    inline for (.{ "string" } ) |name| {
+    inline for (.{ "argv", "clock_gettime", "string" } ) |name| {
         const exe = b.addExecutable("libc-test-functional-" ++ name, b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}));
         exe.addCSourceFiles(common_src, &[_][]const u8 {});
         exe.setTarget(target);
@@ -259,6 +259,11 @@ fn addCmph(
     exe.linkLibrary(zig_libc);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
+    // TODO: should zig_libc and zig_start be able to add library dependencies?
+    if (target.getOs().tag == .windows) {
+        exe.linkSystemLibrary("ntdll");
+        exe.linkSystemLibrary("kernel32");
+    }
 
     const step = b.step("cmph", "build the cmph tool");
     step.dependOn(&exe.install_step.?.step);

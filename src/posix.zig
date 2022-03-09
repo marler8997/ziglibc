@@ -5,6 +5,7 @@ const c = @cImport({
     @cInclude("errno.h");
     @cInclude("string.h");
     @cInclude("stdlib.h");
+    @cInclude("time.h");
 });
 
 const trace = @import("trace.zig");
@@ -89,4 +90,41 @@ export fn strdup(s: [*:0]const u8) callconv(.C) ?[*:0]u8 {
         _ = c.strcpy(new_s, s);
     }
     return std.meta.assumeSentinel(optional_new_s, 0);
+}
+
+// --------------------------------------------------------------------------------
+// time
+// --------------------------------------------------------------------------------
+comptime {
+    std.debug.assert(@sizeOf(c.timespec) == @sizeOf(std.os.timespec));
+    if (builtin.os.tag != .windows) {
+        std.debug.assert(c.CLOCK_REALTIME == std.os.CLOCK.REALTIME);
+    }
+}
+
+export fn clock_gettime(clk_id: c.clockid_t, tp: *std.os.timespec) callconv(.C) c_int {
+    if (builtin.os.tag == .windows) {
+        if (clk_id == c.CLOCK_REALTIME) {
+            var ft: std.os.windows.FILETIME = undefined;
+            std.os.windows.kernel32.GetSystemTimeAsFileTime(&ft);
+            // FileTime has a granularity of 100 nanoseconds and uses the NTFS/Windows epoch.
+            const ft64 = (@as(u64, ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
+            const ft_per_s = std.time.ns_per_s / 100;
+            tp.* = .{
+                .tv_sec = @intCast(i64, ft64 / ft_per_s) + std.time.epoch.windows,
+                .tv_nsec = @intCast(c_long, ft64 % ft_per_s) * 100,
+            };
+            return 0;
+        }
+        // TODO POSIX implementation of CLOCK.MONOTONIC on Windows.
+        std.debug.panic("clk_id {} not implemented on Windows", .{clk_id});
+    }
+
+    switch (std.os.errno(std.os.system.clock_gettime(clk_id, tp))) {
+        .SUCCESS => return 0,
+        else => |e| {
+            c.errno = @enumToInt(e);
+            return -1;
+        },
+    }
 }
