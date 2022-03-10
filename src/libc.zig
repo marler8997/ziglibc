@@ -3,6 +3,7 @@ const std = @import("std");
 
 const c = @cImport({
     @cInclude("stdio.h");
+    @cInclude("stdlib.h");
     @cInclude("setjmp.h");
     @cInclude("locale.h");
     @cInclude("time.h");
@@ -161,7 +162,7 @@ export fn srand(seed: c_uint) callconv(.C) void {
 }
 
 export fn rand() callconv(.C) c_int {
-    @panic("rand not implemented");
+    return @bitCast(c_int, @intCast(c_uint, global.rand.random().int(std.math.IntFittingRange(0, c.RAND_MAX))));
 }
 
 // --------------------------------------------------------------------------------
@@ -547,23 +548,23 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
     }
 
     var flags: u32 = 0;
-    var os_mode: std.os.mode_t = 0;
     for (std.mem.span(mode)) |mode_char| {
         if (mode_char == 'r') {
             flags |= std.os.O.RDONLY;
         } else if (mode_char == 'w') {
-            flags |= std.os.O.WRONLY;
+            flags |= std.os.O.WRONLY | std.os.O.CREAT | std.os.O.TRUNC;
         } else if (mode_char == 'b') {
             // not really sure what this is supposed to do yet, ignore it for now
         } else {
             std.debug.panic("unhandled open flag '{c}' (from '{s}')", .{ mode_char, mode });
         }
     }
-    const fd = std.os.system.open(filename, flags, os_mode);
+    const fd = std.os.system.open(filename, flags, 0o666);
     switch (std.os.errno(fd)) {
         .SUCCESS => {},
         else => |e| {
             errno = @enumToInt(e);
+            trace.log("fopen return null (errno={})", .{errno});
             return null;
         },
     }
