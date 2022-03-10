@@ -10,18 +10,21 @@ pub fn build(b: *std.build.Builder) void {
     const zig_start = libcbuild.addZigStart(b);
     zig_start.setTarget(target);
     zig_start.setBuildMode(mode);
+    zig_start.install();
 
     const zig_libc = libcbuild.addZigLibc(b, .{
         .link = .static,
     });
     zig_libc.setTarget(target);
     zig_libc.setBuildMode(mode);
+    zig_libc.install();
 
     const zig_lib_posix = libcbuild.addZigLibPosix(b, .{
         .link = .static,
     });
     zig_lib_posix.setTarget(target);
     zig_lib_posix.setBuildMode(mode);
+    zig_lib_posix.install();
 
     const test_step = b.step("test", "Run unit tests");
 
