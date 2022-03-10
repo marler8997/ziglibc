@@ -8,7 +8,7 @@
 
 #include "private/null.h"
 #include "private/sizet.h"
-typedef int wchar_t;
+#include "private/wchart.h"
 
 typedef struct { int quot, rem; } div_t;
 typedef struct { long quot, rem; } ldiv_t;

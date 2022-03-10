@@ -135,7 +135,7 @@ fn addLibcTest(
     const libc_test_path = libc_test_repo.path;
     const libc_test_step = b.step("libc-test", "run tests from the libc-test project");
 
-    inline for (.{ "assert", "string" } ) |name| {
+    inline for (.{ "assert", "stddef", "string" } ) |name| {
         const lib = b.addObject("libc-test-api-" ++ name, b.pathJoin(&.{libc_test_path, "src", "api", name ++ ".c"}));
         lib.setTarget(target);
         lib.setBuildMode(mode);
