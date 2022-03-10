@@ -82,4 +82,11 @@ void perror(const char *s);
     int snprintf(char * restrict s, size_t n, const char * restrict format, ...);
 #endif
 
+// NOTE: this stuff is defined by POSIX, not libc, but they need
+//       to live in this header
+#if 1
+    FILE *popen(const char *command, const char *mode);
+#endif
+
+
 #endif /* _STDIO_H */
