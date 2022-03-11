@@ -49,7 +49,9 @@ const char *format, const struct tm *timeptr);
 #if 1
     typedef int clockid_t;
     #define CLOCK_REALTIME 0
-    int clock_gettime(clockid_t clk_id, struct timespec *tp);
+    #if __STDC_VERSION__ >= 201112L
+        int clock_gettime(clockid_t clk_id, struct timespec *tp);
+    #endif
 #endif
 
 #endif /* _TIME_H */
