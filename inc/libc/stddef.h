@@ -2,8 +2,8 @@
 #define _STDDEF_H
 
 #include "private/null.h"
-#include "private/sizet.h"
-#include "private/wchart.h"
+#include "private/size_t.h"
+#include "private/wchar_t.h"
 
 // TODO: look into this more
 typedef int ptrdiff_t;

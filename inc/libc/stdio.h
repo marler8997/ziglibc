@@ -2,7 +2,7 @@
 #define _STDIO_H
 
 #include "private/null.h"
-#include "private/sizet.h"
+#include "private/size_t.h"
 #include "private/valist.h"
 
 #define _IOFBF 0

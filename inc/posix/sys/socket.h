@@ -1,7 +1,7 @@
 #ifndef _SYS_SOCKET_H
 #define _SYS_SOCKET_H
 
-#include "../private/ssizet.h"
+#include "../private/ssize_t.h"
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2

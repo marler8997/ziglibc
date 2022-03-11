@@ -5,7 +5,7 @@
 #include "../private/fdset.h"
 
 #include "../../libc/private/fixedwidthints.h"
-#include "../../libc/private/timet.h"
+#include "../../libc/private/time_t.h"
 
 #define ITIMER_REAL 0
 #define ITIMER_VIRTUAL 1

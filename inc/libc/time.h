@@ -2,9 +2,9 @@
 #define _TIME_H
 
 #include "private/null.h"
-#include "private/sizet.h"
+#include "private/size_t.h"
 #include "private/fixedwidthints.h"
-#include "private/timet.h"
+#include "private/time_t.h"
 
 // CLK_TCK
 typedef long clock_t;
