@@ -13,6 +13,9 @@ void (*signal(int sig, void (*func)(int)))(int);
 
 // TODO: these are posix definitions for the signal.h libc header
 #if 1
+    #include "../posix/private/pid_t.h"
+    #include "../posix/private/uid_t.h"
+
     #define SIGALRM 14
     typedef struct { unsigned long __signals; } sigset_t;
     union sigval {
@@ -23,10 +26,8 @@ void (*signal(int sig, void (*func)(int)))(int);
       int si_signo;
       int si_code;
       int si_errno;
-      //pid_t si_pid;
-      int si_pid; // TODO: use pid_t instead
-      //uid_t si_uid;
-      int si_uid; // TODO: use uid_t instead
+      pid_t si_pid;
+      uid_t si_uid;
       void *si_addr;
       int si_status;
       long si_band;
