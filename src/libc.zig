@@ -600,6 +600,10 @@ export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_i
         @panic("fseek not implemented on Windows");
     }
 
+    // woraround error in std/os/linux.zig: error: destination type 'usize' has size 4 but source type 'i64' has size 8
+    // return syscall3(.lseek, @bitCast(usize, @as(isize, fd)), @bitCast(usize, offset), whence);
+    //                                                                   ^
+    if (@sizeOf(usize) == 4) @panic("not implemented");
     const rc = std.os.system.lseek(stream.fd, @intCast(i64, offset), @intCast(usize, whence));
     switch (std.os.errno(rc)) {
         .SUCCESS => return 0,
@@ -880,7 +884,8 @@ export fn mktime(timeptr: *c.tm) callconv(.C) c.time_t {
 
 export fn time(timer: ?*c.time_t) callconv(.C) c.time_t {
     trace.log("time {*}", .{timer});
-    const now = std.time.timestamp();
+    const now_zig = std.time.timestamp();
+    const now = @intCast(c.time_t, std.math.boolMask(c.time_t, true) & now_zig);
     if (timer) |_| {
         timer.?.* = now;
     }

@@ -5,7 +5,14 @@
 #ifdef _WIN32
     typedef long long ssize_t;
 #else
-    typedef long ssize_t;
+
+    // TODO: come up with a better way to do this
+    #ifdef __x86_64__
+        typedef long ssize_t;
+    #else
+        typedef int ssize_t;
+    #endif
+
 #endif
 
 #endif /* _PRIVATE_SSIZET_H */

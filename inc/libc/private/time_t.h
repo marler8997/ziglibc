@@ -1,8 +1,8 @@
 #ifndef _PRIVATE_TIMET_H
 #define _PRIVATE_TIMET_H
 
-#include "fixedwidthints.h"
+#include "../posix/private/ssize_t.h"
 
-typedef int64_t time_t;
+typedef ssize_t time_t;
 
 #endif /* _PRIVATE_TIMET_H */

@@ -26,6 +26,13 @@ pub fn build(b: *std.build.Builder) void {
     zig_lib_posix.setBuildMode(mode);
     zig_lib_posix.install();
 
+    const zig_lib_linux = libcbuild.addZigLibLinux(b, .{
+        .link = .static,
+    });
+    zig_lib_linux.setTarget(target);
+    zig_lib_linux.setBuildMode(mode);
+    zig_lib_linux.install();
+
     const test_step = b.step("test", "Run unit tests");
 
     const test_env_exe = b.addExecutable("testenv", "test" ++ std.fs.path.sep_str ++ "testenv.zig");
@@ -61,6 +68,15 @@ pub fn build(b: *std.build.Builder) void {
         const exe = addTest("format", b, target, mode, zig_libc, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
+    {
+        const exe = addTest("types", b, target, mode, zig_libc, zig_start);
+        const run_step = exe.run();
+        run_step.addArg(b.fmt("{}", .{@divExact(target.toTarget().cpu.arch.ptrBitWidth(), 8)}));
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
         };
@@ -107,6 +123,7 @@ fn addTest(
 ) *std.build.LibExeObjStep {
     const exe = b.addExecutable(name, "test" ++ std.fs.path.sep_str ++ name ++ ".c");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+    exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
     exe.linkLibrary(zig_libc);
     exe.linkLibrary(zig_start);
     exe.setTarget(target);
