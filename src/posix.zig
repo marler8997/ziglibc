@@ -5,7 +5,10 @@ const c = @cImport({
     @cInclude("errno.h");
     @cInclude("string.h");
     @cInclude("stdlib.h");
+    @cInclude("stdio.h");
     @cInclude("time.h");
+    @cInclude("signal.h");
+    @cInclude("sys/time.h");
 });
 
 const trace = @import("trace.zig");
@@ -93,7 +96,24 @@ export fn strdup(s: [*:0]const u8) callconv(.C) ?[*:0]u8 {
 }
 
 // --------------------------------------------------------------------------------
-// time
+// stdio
+// --------------------------------------------------------------------------------
+export fn popen(command: [*:0]const u8, mode: [*:0]const u8) *c.FILE {
+    trace.log("popen '{}' mode='{s}'", .{trace.fmtStr(command), mode});
+    @panic("popen not implemented");
+}
+
+
+// --------------------------------------------------------------------------------
+// unistd
+// --------------------------------------------------------------------------------
+export fn access(path: [*:0]const u8, amode: c_int) callconv(.C) c_int {
+    trace.log("access '{}' mode=0x{x}", .{trace.fmtStr(path), amode});
+    @panic("acces not implemented");
+}
+
+// --------------------------------------------------------------------------------
+// sys/time
 // --------------------------------------------------------------------------------
 comptime {
     std.debug.assert(@sizeOf(c.timespec) == @sizeOf(std.os.timespec));
@@ -127,4 +147,27 @@ export fn clock_gettime(clk_id: c.clockid_t, tp: *std.os.timespec) callconv(.C) 
             return -1;
         },
     }
+}
+
+export fn gettimeofday(tv: *c.timeval, tz: *anyopaque) callconv(.C) c_int {
+    trace.log("gettimeofday tv={*} tz={*}", .{tv, tz});
+    @panic("gettimeofday not implemented");
+}
+
+export fn setitimer(which: c_int, value: *const c.itimerval, avalue: *c.itimerval) callconv(.C) c_int {
+    trace.log("setitimer which={}", .{which});
+    _ = value;
+    _ = avalue;
+    @panic("setitimer not implemented");
+}
+
+
+// --------------------------------------------------------------------------------
+// signal
+// --------------------------------------------------------------------------------
+export fn sigaction(sig: c_int, act: *const c.struct_sigaction, oact: *c.struct_sigaction) callconv(.C) c_int {
+    trace.log("sigaction sig={}", .{sig});
+    _ = act;
+    _ = oact;
+    @panic("sigaction not implemented");
 }

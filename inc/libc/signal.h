@@ -39,6 +39,8 @@ void (*signal(int sig, void (*func)(int)))(int);
       int sa_flags;
       void (*sa_sigaction)(int, siginfo_t *,void*);
     };
+    int sigaction(int sig, const struct sigaction *restrict act,
+        struct sigaction *restrict oact);
 #endif
 
 

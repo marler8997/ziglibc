@@ -40,10 +40,11 @@ pub fn addZigLibPosix(builder: *std.build.Builder, opt: ZigLibcOptions) *std.bui
         },
     }
     const lib = builder.addStaticLibrary("posix", "src" ++ std.fs.path.sep_str ++ "posix.zig");
-    //lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "posix.c", &[_][]const u8 {
-    //    "-std=c11",
-    //});
+    lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "posix.c", &[_][]const u8{
+        "-std=c11",
+    });
     lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+    lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
     return lib;
 }
 
