@@ -9,7 +9,7 @@ pub const ZigLibcOptions = struct {
 
 /// Provides a _start symbol that will call C main
 pub fn addZigStart(builder: *std.build.Builder) *std.build.LibExeObjStep {
-    const lib = builder.addStaticLibrary("zigstart", "src" ++ std.fs.path.sep_str ++ "zigstart.zig");
+    const lib = builder.addStaticLibrary("start", "src" ++ std.fs.path.sep_str ++ "start.zig");
     return lib;
 }
 
