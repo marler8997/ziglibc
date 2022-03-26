@@ -2,7 +2,7 @@
 #define _SYS_TIME_H
 
 #include "../private/suseconds.h"
-#include "../private/fdset.h"
+#include "../private/fd_set.h"
 
 #include "../../libc/private/fixedwidthints.h"
 #include "../../libc/private/time_t.h"
