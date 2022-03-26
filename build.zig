@@ -15,6 +15,7 @@ pub fn build(b: *std.build.Builder) void {
     const libc_full_static = libcbuild.addLibc(b, .{
         .variant = .full,
         .link = .static,
+        .start = .ziglibc,
     });
     libc_full_static.setTarget(target);
     libc_full_static.setBuildMode(mode);
@@ -22,6 +23,7 @@ pub fn build(b: *std.build.Builder) void {
     const libc_full_shared = libcbuild.addLibc(b, .{
         .variant = .full,
         .link = .shared,
+        .start = .ziglibc,
     });
     libc_full_shared.setTarget(target);
     libc_full_shared.setBuildMode(mode);
@@ -31,6 +33,7 @@ pub fn build(b: *std.build.Builder) void {
     const libc_only_std_static = libcbuild.addLibc(b, .{
         .variant = .only_std,
         .link = .static,
+        .start = .ziglibc,
     });
     libc_only_std_static.setTarget(target);
     libc_only_std_static.setBuildMode(mode);
@@ -38,6 +41,7 @@ pub fn build(b: *std.build.Builder) void {
     const libc_only_std_shared = libcbuild.addLibc(b, .{
         .variant = .only_std,
         .link = .shared,
+        .start = .ziglibc,
     });
     libc_only_std_shared.setTarget(target);
     libc_only_std_shared.setBuildMode(mode);
@@ -46,6 +50,7 @@ pub fn build(b: *std.build.Builder) void {
     const libc_only_posix = libcbuild.addLibc(b, .{
         .variant = .only_posix,
         .link = .static,
+        .start = .ziglibc,
     });
     libc_only_posix.setTarget(target);
     libc_only_posix.setBuildMode(mode);
@@ -54,6 +59,7 @@ pub fn build(b: *std.build.Builder) void {
     const libc_only_linux = libcbuild.addLibc(b, .{
         .variant = .only_linux,
         .link = .static,
+        .start = .ziglibc,
     });
     libc_only_linux.setTarget(target);
     libc_only_linux.setBuildMode(mode);

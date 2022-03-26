@@ -9,9 +9,14 @@ pub const LibVariant = enum {
     only_linux,
     full,
 };
+pub const Start = enum {
+    ziglibc,
+    glibc,
+};
 pub const ZigLibcOptions = struct {
     variant: LibVariant,
     link: LinkKind,
+    start: Start,
 };
 
 /// Provides a _start symbol that will call C main
@@ -30,6 +35,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
         .full => "c",
     };
     const modules_options = builder.addOptions();
+    modules_options.addOption(bool, "glibcstart", switch (opt.start) { .glibc => true, else => false });
     const index = "src" ++ std.fs.path.sep_str ++ "lib.zig";
     const lib = switch (opt.link) {
         .static => builder.addStaticLibrary(name, index),
