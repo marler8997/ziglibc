@@ -10,5 +10,10 @@
     typedef long int intptr_t; // TODO: fix this
 #endif
 
+// NOTE: this stuff is defined by POSIX, not libc, but they need
+//       to live in this header
+#if 1
+    typedef unsigned long long uint64_t;
+#endif
 
 #endif /* _STDINT_H */

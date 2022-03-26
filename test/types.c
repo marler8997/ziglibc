@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -30,6 +31,7 @@ int main(int argc, char *argv[])
 
   check(size_t, ptr_width);
   check(ssize_t, ptr_width);
+  check(uint64_t, 8);
   printf("Success!\n");
   return result;
 }
