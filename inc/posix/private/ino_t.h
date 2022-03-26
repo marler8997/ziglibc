@@ -3,4 +3,4 @@
 
 typedef int ino_t; // TODO: look into this type more
 
-#endif _PRIVATE_INO_T_H
+#endif /* _PRIVATE_INO_T_H */

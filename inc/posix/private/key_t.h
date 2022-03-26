@@ -3,4 +3,4 @@
 
 typedef int key_t; // TODO: look into this type more
 
-#endif _PRIVATE_KEY_T_H
+#endif /* _PRIVATE_KEY_T_H */

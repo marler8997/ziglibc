@@ -782,6 +782,9 @@ export fn perror(s: [*:0]const u8) callconv(.C) void {
 export fn _formatCInt(buf: [*]u8, value: c_int) callconv(.C) usize {
     return std.fmt.formatIntBuf(buf[0..100], value, 10, .lower, .{});
 }
+export fn _formatCUint(buf: [*]u8, value: c_uint) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, 10, .lower, .{});
+}
 
 // --------------------------------------------------------------------------------
 // math

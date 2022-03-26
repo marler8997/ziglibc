@@ -7,6 +7,7 @@
 // TODO: restrict pointers?
 size_t _fwrite_buf(const char *ptr, size_t size, FILE *stream);
 size_t _formatCInt(char *buf, int value);
+size_t _formatCUint(char *buf, int value);
 
 struct Writer {
   // if len is 0, then s is null-terminated
@@ -46,6 +47,14 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
       char buf[100];
       const int value = va_arg(args, int);
       size_t len = _formatCInt(buf, value);
+      size_t written = writer->write(writer, buf, len);
+      *out_written += written;
+      if (written != len) return -1; // error
+      fmt++;
+    } else if (fmt[0] == 'u') {
+      char buf[100];
+      const unsigned value = va_arg(args, unsigned);
+      size_t len = _formatCUint(buf, value);
       size_t written = writer->write(writer, buf, len);
       *out_written += written;
       if (written != len) return -1; // error

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <limits.h>
 
 int main(int argc, char *argv[])
 {
@@ -26,12 +27,34 @@ int main(int argc, char *argv[])
 #define check(T,b)                              \
   if (sizeof(T) != b) {                         \
     result = -1;                                \
-    printf(#T " %d != %d\n", sizeof(T), b);     \
+    printf(#T " %u != %u\n", (unsigned)sizeof(T), b);   \
   }
 
   check(size_t, ptr_width);
   check(ssize_t, ptr_width);
   check(uint64_t, 8);
+
+  if (INT_MAX == 2147483647) {
+    check(int, 4);
+  } else {
+    result = -1;
+    fprintf(stderr, "unhandled INT_MAX value %d", INT_MAX);
+  }
+  if (UINT_MAX == 0xffffffffU) {
+    check(unsigned, 4);
+  } else {
+    result = -1;
+    fprintf(stderr, "unhandled UINT_MAX value %u", UINT_MAX);
+  }
+  if (LONG_MAX == 2147483647L) {
+    check(long, 4);
+  } else if (LONG_MAX == 9223372036854775807L) {
+    check(long, 8);
+  } else {
+    result = -1;
+    fprintf(stderr, "unhandled LONG_MAX value %d", LONG_MAX);
+  }
+
   printf("Success!\n");
   return result;
 }
