@@ -30,10 +30,13 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
         .full => "c",
     };
     const modules_options = builder.addOptions();
+    const index = "src" ++ std.fs.path.sep_str ++ "lib.zig";
     const lib = switch (opt.link) {
-        .static => builder.addStaticLibrary(name, "src" ++ std.fs.path.sep_str ++ "lib.zig"),
-        // TODO: unversioned?
-        .shared => builder.addSharedLibrary(name, null, .unversioned),
+        .static => builder.addStaticLibrary(name, index),
+        .shared => builder.addSharedLibrary(name, index, switch (opt.variant) {
+            .full => .{ .versioned = .{ .major = 6, .minor = 0 } },
+            else => .unversioned,
+        }),
     };
     lib.addOptions("modules", modules_options);
     const c_flags = [_][]const u8 {

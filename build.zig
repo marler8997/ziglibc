@@ -12,6 +12,22 @@ pub fn build(b: *std.build.Builder) void {
     zig_start.setBuildMode(mode);
     zig_start.install();
 
+    const libc_full_static = libcbuild.addLibc(b, .{
+        .variant = .full,
+        .link = .static,
+    });
+    libc_full_static.setTarget(target);
+    libc_full_static.setBuildMode(mode);
+    libc_full_static.install();
+    const libc_full_shared = libcbuild.addLibc(b, .{
+        .variant = .full,
+        .link = .shared,
+    });
+    libc_full_shared.setTarget(target);
+    libc_full_shared.setBuildMode(mode);
+    libc_full_shared.install();
+    b.step("libc-full-shared", "").dependOn(&libc_full_shared.install_step.?.step);
+
     const libc_only_std_static = libcbuild.addLibc(b, .{
         .variant = .only_std,
         .link = .static,
