@@ -12,26 +12,36 @@ pub fn build(b: *std.build.Builder) void {
     zig_start.setBuildMode(mode);
     zig_start.install();
 
-    const zig_libc = libcbuild.addZigLibc(b, .{
+    const libc_only_std_static = libcbuild.addLibc(b, .{
+        .variant = .only_std,
         .link = .static,
     });
-    zig_libc.setTarget(target);
-    zig_libc.setBuildMode(mode);
-    zig_libc.install();
+    libc_only_std_static.setTarget(target);
+    libc_only_std_static.setBuildMode(mode);
+    libc_only_std_static.install();
+    const libc_only_std_shared = libcbuild.addLibc(b, .{
+        .variant = .only_std,
+        .link = .shared,
+    });
+    libc_only_std_shared.setTarget(target);
+    libc_only_std_shared.setBuildMode(mode);
+    libc_only_std_shared.install();
 
-    const zig_lib_posix = libcbuild.addZigLibPosix(b, .{
+    const libc_only_posix = libcbuild.addLibc(b, .{
+        .variant = .only_posix,
         .link = .static,
     });
-    zig_lib_posix.setTarget(target);
-    zig_lib_posix.setBuildMode(mode);
-    zig_lib_posix.install();
+    libc_only_posix.setTarget(target);
+    libc_only_posix.setBuildMode(mode);
+    libc_only_posix.install();
 
-    const zig_lib_linux = libcbuild.addZigLibLinux(b, .{
+    const libc_only_linux = libcbuild.addLibc(b, .{
+        .variant = .only_linux,
         .link = .static,
     });
-    zig_lib_linux.setTarget(target);
-    zig_lib_linux.setBuildMode(mode);
-    zig_lib_linux.install();
+    libc_only_linux.setTarget(target);
+    libc_only_linux.setBuildMode(mode);
+    libc_only_linux.install();
 
     const test_step = b.step("test", "Run unit tests");
 
@@ -40,7 +50,7 @@ pub fn build(b: *std.build.Builder) void {
     test_env_exe.setBuildMode(mode);
 
     {
-        const exe = addTest("hello", b, target, mode, zig_libc, zig_start);
+        const exe = addTest("hello", b, target, mode, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Hello\n",
@@ -48,7 +58,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("strings", b, target, mode, zig_libc, zig_start);
+        const exe = addTest("strings", b, target, mode, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
@@ -56,7 +66,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("fs", b, target, mode, zig_libc, zig_start);
+        const exe = addTest("fs", b, target, mode, libc_only_std_static, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
         run_step.stdout_action = .{
@@ -65,7 +75,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("format", b, target, mode, zig_libc, zig_start);
+        const exe = addTest("format", b, target, mode, libc_only_std_static, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
         run_step.stdout_action = .{
@@ -74,7 +84,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("types", b, target, mode, zig_libc, zig_start);
+        const exe = addTest("types", b, target, mode, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.addArg(b.fmt("{}", .{@divExact(target.toTarget().cpu.arch.ptrBitWidth(), 8)}));
         run_step.stdout_action = .{
@@ -83,8 +93,8 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("getopt", b, target, mode, zig_libc, zig_start);
-        addPosix(exe, zig_lib_posix);
+        const exe = addTest("getopt", b, target, mode, libc_only_std_static, zig_start);
+        addPosix(exe, libc_only_posix);
         {
             const run = exe.run();
             run.stdout_action = .{ .expect_exact = "aflag=0, c_arg='(null)'\n" };
@@ -103,9 +113,9 @@ pub fn build(b: *std.build.Builder) void {
             test_step.dependOn(&run.step);
         }
     }
-    addLibcTest(b, target, mode, zig_libc, zig_start, zig_lib_posix);
-    _ = addLua(b, target, mode, zig_libc, zig_start);
-    _ = addCmph(b, target, mode, zig_libc, zig_start, zig_lib_posix);
+    addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
+    _ = addLua(b, target, mode, libc_only_std_static, zig_start);
+    _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
@@ -118,17 +128,17 @@ fn addTest(
     b: *std.build.Builder,
     target: anytype,
     mode: anytype,
-    zig_libc: *std.build.LibExeObjStep,
+    libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
     const exe = b.addExecutable(name, "test" ++ std.fs.path.sep_str ++ name ++ ".c");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
-    exe.linkLibrary(zig_libc);
+    exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    // TODO: should zig_libc and zig_start be able to add library dependencies?
+    // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
     if (target.getOs().tag == .windows) {
         exe.linkSystemLibrary("ntdll");
         exe.linkSystemLibrary("kernel32");
@@ -140,9 +150,9 @@ fn addLibcTest(
     b: *std.build.Builder,
     target: anytype,
     mode: anytype,
-    zig_libc: *std.build.LibExeObjStep,
+    libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
-    zig_lib_posix: *std.build.LibExeObjStep,
+    libc_only_posix: *std.build.LibExeObjStep,
 ) void {
     const libc_test_repo = GitRepoStep.create(b, .{
         .url = "git://nsz.repo.hu:49100/repo/libc-test",
@@ -174,10 +184,10 @@ fn addLibcTest(
         exe.addIncludePath(libc_inc_path);
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
-        exe.linkLibrary(zig_libc);
+        exe.linkLibrary(libc_only_std_static);
         exe.linkLibrary(zig_start);
-        exe.linkLibrary(zig_lib_posix);
-        // TODO: should zig_libc and zig_start be able to add library dependencies?
+        exe.linkLibrary(libc_only_posix);
+        // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
         if (target.getOs().tag == .windows) {
             exe.linkSystemLibrary("ntdll");
             exe.linkSystemLibrary("kernel32");
@@ -190,7 +200,7 @@ fn addLua(
     b: *std.build.Builder,
     target: anytype,
     mode: anytype,
-    zig_libc: *std.build.LibExeObjStep,
+    libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
     const lua_repo = GitRepoStep.create(b, .{
@@ -223,7 +233,7 @@ fn addLua(
     });
 
     lua_exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-    lua_exe.linkLibrary(zig_libc);
+    lua_exe.linkLibrary(libc_only_std_static);
     lua_exe.linkLibrary(zig_start);
 
     const step = b.step("lua", "build the LUA interpreter");
@@ -236,7 +246,7 @@ fn addCmph(
     b: *std.build.Builder,
     target: anytype,
     mode: anytype,
-    zig_libc: *std.build.LibExeObjStep,
+    libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
@@ -278,10 +288,10 @@ fn addCmph(
     exe.addIncludePath("inc/libc");
     exe.addIncludePath("inc/posix");
     exe.addIncludePath("inc/gnu");
-    exe.linkLibrary(zig_libc);
+    exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
-    // TODO: should zig_libc and zig_start be able to add library dependencies?
+    // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
     if (target.getOs().tag == .windows) {
         exe.linkSystemLibrary("ntdll");
         exe.linkSystemLibrary("kernel32");
