@@ -24,35 +24,51 @@ int main(int argc, char *argv[])
 
   int result = 0;
 
-#define check(T,b)                              \
-  if (sizeof(T) != b) {                         \
-    result = -1;                                \
+#define check_equal(prefix, fmt_spec, expected, actual)                 \
+  if (expected != actual) {                                             \
+    result = -1;                                                        \
+    printf(prefix " expected " fmt_spec " but got " fmt_spec "\n", expected, actual); \
+  }
+
+#define check_sizeof(T,b)                               \
+  if (sizeof(T) != b) {                                 \
+    result = -1;                                        \
     printf(#T " %u != %u\n", (unsigned)sizeof(T), b);   \
   }
 
-  check(size_t, ptr_width);
-  check(ssize_t, ptr_width);
-  check(uint64_t, 8);
+  check_sizeof(size_t, ptr_width);
+  check_sizeof(ssize_t, ptr_width);
+  check_sizeof(uint64_t, 8);
 
   if (INT_MAX == 2147483647) {
-    check(int, 4);
+    check_equal("UINT_MAX", "%u", 0xffffffff, UINT_MAX);
+    check_sizeof(int, 4);
+    check_sizeof(unsigned, 4);
   } else {
     result = -1;
     fprintf(stderr, "unhandled INT_MAX value %d", INT_MAX);
   }
-  if (UINT_MAX == 0xffffffffU) {
-    check(unsigned, 4);
-  } else {
-    result = -1;
-    fprintf(stderr, "unhandled UINT_MAX value %u", UINT_MAX);
-  }
+
   if (LONG_MAX == 2147483647L) {
-    check(long, 4);
+    check_equal("ULONG_MAX", "%lu", 0xffffffff, ULONG_MAX);
+    check_sizeof(long, 4);
+    check_sizeof(unsigned long, 4);
   } else if (LONG_MAX == 9223372036854775807L) {
-    check(long, 8);
+    check_equal("ULONG_MAX", "%lu", 0xffffffffffffffff, ULONG_MAX);
+    check_sizeof(long, 8);
+    check_sizeof(unsigned long, 8);
   } else {
     result = -1;
     fprintf(stderr, "unhandled LONG_MAX value %d", LONG_MAX);
+  }
+
+  if (LLONG_MAX == 9223372036854775807) {
+    check_equal("ULLONG_MAX", "%lu", 0xffffffffffffffff, ULLONG_MAX);
+    check_sizeof(long long, 8);
+    check_sizeof(unsigned long long, 8);
+  } else {
+    result = -1;
+    fprintf(stderr, "unhandled LLONG_MAX value %lld", LONG_MAX);
   }
 
   printf("Success!\n");
