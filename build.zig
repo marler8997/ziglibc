@@ -218,6 +218,7 @@ fn addLua(
 
     lua_exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8{
         "-nostdinc",
+        "-nostdlib",
         "-std=c99",
     });
 
