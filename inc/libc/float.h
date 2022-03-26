@@ -7,7 +7,7 @@
 //       the values should actually be
 #define DBL_DIG           10
 #define DBL_EPSILON       1E-9
-#define DBL_MANT_DIG      TODO_DEFINE_DBL_MANT_DIG
+#define DBL_MANT_DIG      53
 #define DBL_MAX           1E+37
 #define DBL_MAX_10_EXP    37
 #define DBL_MAX_EXP       TODO_DEFINE_DBL_MAX_EXP
