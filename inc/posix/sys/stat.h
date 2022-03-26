@@ -29,4 +29,6 @@ struct stat {
   blkcnt_t st_blocks;
 };
 
+int stat(const char *restrict path, struct stat *restrict buf);
+
 #endif /* _SYS_STAT_H */
