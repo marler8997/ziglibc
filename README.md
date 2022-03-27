@@ -4,6 +4,24 @@ An exploration on creating a libc implementation in Zig.
 
 "libc" includes implementations for the C Standard and the Posix Standard.
 
+# How to Use
+
+This is a little ugly and should change but I'm documenting it here for the adventurous.
+
+You can use ziglibc by running `zig build` on this repository.  Then add these arguments
+to your `zig cc` command line:
+
+```
+zig cc \
+    -nostdlib \
+    -I PATH_TO_ZIGLIBC_SRC/inc/libc \
+    -I PATH_TO_ZIGLIBC_SRC/inc/posix \
+    -I PATH_TO_ZIGLIBC_SRC/inc/linux \
+    -L PATH_TO_ZIGLIBC_INSTALL/lib \
+    -lstart \
+    -lc
+```
+
 # Thoughts
 
 I'd like a common codebase that can create libc headers that emulate various libc implementations.
