@@ -11,6 +11,7 @@ pub fn build(b: *std.build.Builder) void {
     zig_start.setTarget(target);
     zig_start.setBuildMode(mode);
     zig_start.install();
+    b.step("start", "").dependOn(&zig_start.install_step.?.step);
 
     const libc_full_static = libcbuild.addLibc(b, .{
         .variant = .full,
@@ -29,6 +30,8 @@ pub fn build(b: *std.build.Builder) void {
     libc_full_shared.setBuildMode(mode);
     libc_full_shared.install();
     b.step("libc-full-shared", "").dependOn(&libc_full_shared.install_step.?.step);
+    // TODO: create a specs file?
+    //       you can add -specs=file to the gcc command line to override values in the spec
 
     const libc_only_std_static = libcbuild.addLibc(b, .{
         .variant = .only_std,
