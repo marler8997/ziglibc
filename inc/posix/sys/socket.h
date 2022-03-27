@@ -2,6 +2,7 @@
 #define _SYS_SOCKET_H
 
 #include "../private/ssize_t.h"
+#include "../private/sockaddr.h"
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2

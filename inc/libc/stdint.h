@@ -5,8 +5,13 @@
     #error stdint.h requires at least c99 I think
 #endif
 
+#include "private/int8_t.h"
+#include "private/uint8_t.h"
+#include "private/int16_t.h"
 #include "private/uint16_t.h"
+#include "private/int32_t.h"
 #include "private/uint32_t.h"
+#include "private/int64_t.h"
 #include "private/uint64_t.h"
 
 #if __STDC_VERSION__ >= 201112L

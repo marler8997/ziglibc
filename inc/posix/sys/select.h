@@ -3,7 +3,7 @@
 
 // According to POSIX.1-2001
 #if 1
-    #include "../private/fs_set.h"
+    #include "../private/fd_set.h"
 #endif
 
 #endif /* _SYS_SELECT_H */

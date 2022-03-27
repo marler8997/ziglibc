@@ -22,6 +22,9 @@ pub const ZigLibcOptions = struct {
 /// Provides a _start symbol that will call C main
 pub fn addZigStart(builder: *std.build.Builder) *std.build.LibExeObjStep {
     const lib = builder.addStaticLibrary("start", "src" ++ std.fs.path.sep_str ++ "start.zig");
+    // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
+    //       anything except performance to enable it
+    lib.force_pic = true;
     return lib;
 }
 
@@ -32,7 +35,9 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
         .only_std => "c-only-std",
         .only_posix => "c-only-posix",
         .only_linux => "c-only-linux",
-        .full => "c",
+        //.full => "c",
+        .full => "cguana", // use cguana to avoid passing in '-lc' to zig which will
+                           // cause it to add the system libc headers
     };
     const modules_options = builder.addOptions();
     modules_options.addOption(bool, "glibcstart", switch (opt.start) { .glibc => true, else => false });
@@ -44,6 +49,9 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
             else => .unversioned,
         }),
     };
+    // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
+    //       anything except performance to enable it
+    lib.force_pic = true;
     lib.addOptions("modules", modules_options);
     const c_flags = [_][]const u8 {
         "-std=c11",

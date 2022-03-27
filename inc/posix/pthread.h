@@ -41,4 +41,7 @@ typedef int pthread_rwlockattr_t;
 typedef int pthread_spinlock_t;
 typedef int pthread_t;
 
+int pthread_mutex_lock(pthread_mutex_t *);
+int pthread_mutex_unlock(pthread_mutex_t *);
+
 #endif /* _PTHREAD_H */

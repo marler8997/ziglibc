@@ -15,11 +15,8 @@ typedef struct {
   int s_addr;
 } in_addr_t;
 
-// TODO: define me better
-struct sockaddr {
-  int sa_family;
-  char reserved[100];
-};
+#include "../private/sockaddr.h"
+
 // TODO: define me better
 struct sockaddr_in {
   int sin_family;

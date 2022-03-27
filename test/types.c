@@ -44,8 +44,13 @@ int main(int argc, char *argv[])
 
   check_sizeof(size_t, ptr_width);
   check_sizeof(ssize_t, ptr_width);
+  check_sizeof(int8_t, 1);
+  check_sizeof(uint8_t, 1);
+  check_sizeof(int16_t, 2);
   check_sizeof(uint16_t, 2);
+  check_sizeof(int32_t, 4);
   check_sizeof(uint32_t, 4);
+  check_sizeof(int64_t, 8);
   check_sizeof(uint64_t, 8);
 
   if (INT_MAX == 2147483647) {

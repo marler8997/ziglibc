@@ -4,7 +4,6 @@
 #include "../private/suseconds.h"
 #include "../private/fd_set.h"
 
-#include "../../libc/private/fixedwidthints.h"
 #include "../../libc/private/time_t.h"
 
 #define ITIMER_REAL 0

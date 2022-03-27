@@ -3,7 +3,6 @@
 
 #include "private/null.h"
 #include "private/size_t.h"
-#include "private/fixedwidthints.h"
 #include "private/time_t.h"
 
 // CLK_TCK
