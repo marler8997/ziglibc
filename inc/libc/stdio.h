@@ -85,6 +85,9 @@ void perror(const char *s);
 // NOTE: this stuff is defined by POSIX, not libc, but they need
 //       to live in this header
 #if 1
+    #define STDIN_FILENO 0
+    #define STDOUT_FILENO 1
+    #define STDERR_FILENO 2
     FILE *popen(const char *command, const char *mode);
 #endif
 

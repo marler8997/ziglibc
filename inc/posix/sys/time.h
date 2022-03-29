@@ -1,19 +1,15 @@
 #ifndef _SYS_TIME_H
 #define _SYS_TIME_H
 
-#include "../private/suseconds.h"
+#include "../private/suseconds_t.h"
 #include "../private/fd_set.h"
 
 #include "../../libc/private/time_t.h"
+#include "../private/timeval.h"
 
 #define ITIMER_REAL 0
 #define ITIMER_VIRTUAL 1
 #define ITIMER_PROF 2
-
-struct timeval {
-  time_t tv_sec;
-  suseconds_t tv_usec;
-};
 
 struct itimerval {
   struct timeval it_interval;

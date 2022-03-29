@@ -4,6 +4,7 @@
 #include "private/null.h"
 #include "private/size_t.h"
 #include "private/time_t.h"
+#include "private/timespec.h"
 
 // CLK_TCK
 typedef long clock_t;
@@ -36,12 +37,7 @@ const char *format, const struct tm *timeptr);
 
 #if __STDC_VERSION__ >= 201112L
     #define TIME_UTC 1
-    struct timespec {
-        time_t tv_sec; // whole seconds >= 0
-        long tv_nsec; // nanoseconds [0,999999999]
-    };
 #endif
-
 // NOTE: it looks like the definitions in this block are defined by posix (not libc)
 //       but they need to be in time.h defined by libc (not posix)
 //       so for now I'm just including it here

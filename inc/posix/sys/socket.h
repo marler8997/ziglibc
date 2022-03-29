@@ -21,5 +21,9 @@ ssize_t sendto(int socket, const void *message, size_t len,
 ssize_t recvfrom(int socket, void *restrict buffer, size_t length,
                  int flag, struct sockaddr *restrict address,
                  socklen_t *restrict address_len);
+#define SHUT_RD 0
+#define SHUT_WR 1
+#define SHUT_RDWR 2
+int shutdown(int socket, int how);
 
 #endif /* _SYS_SOCKET_H */
