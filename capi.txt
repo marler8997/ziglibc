@@ -1,0 +1,11 @@
+c89
+define NULL ((void*)0)
+header stdio
+header stdlib
+header string
+header time
+header locale
+
+c89
+define SEEK_SET 0
+header stdio

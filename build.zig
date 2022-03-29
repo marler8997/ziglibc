@@ -4,6 +4,14 @@ const libcbuild = @import("ziglibcbuild.zig");
 const luabuild = @import("luabuild.zig");
 
 pub fn build(b: *std.build.Builder) void {
+    {
+        const exe = b.addExecutable("genheaders", "src" ++ std.fs.path.sep_str ++ "genheaders.zig");
+        const run = exe.run();
+        run.addArg(b.pathFromRoot("capi.txt"));
+        // TODO: not working yet
+        //b.getInstallStep().dependOn(&run.step);
+    }
+
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
