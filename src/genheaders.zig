@@ -25,9 +25,43 @@ pub fn main() !u8 {
         std.log.err("{d} errors", .{parser.total_errors});
         return 0xff;
     }
+
+    for (parser.definitions.items) |def| {
+        std.log.info("{}", .{def.def});
+    }
+
     return 0;
 }
 
+
+fn isWhitespace(c: u8) bool { return c == ' '; }
+
+fn skipWhitespace(text: []const u8, offset: usize) usize {
+    var i = offset;
+    while (i < text.len) : (i += 1) {
+        if (!isWhitespace(text[i])) break;
+    }
+    return i;
+}
+fn toWhitespace(text: []const u8, offset: usize) usize {
+    var i = offset;
+    while (i < text.len) : (i += 1) {
+        if (isWhitespace(text[i])) break;
+    }
+    return i;
+}
+
+fn peel(text: *[]const u8) ?[]const u8 {
+    const start = skipWhitespace(text.*, 0);
+    if (start == text.len) {
+        text.* = text.*[start..];
+        return null;
+    }
+    const end = toWhitespace(text.*, start + 1);
+    const result = text.*[start .. end];
+    text.* = text.*[end..];
+    return result;
+}
 
 const ErrorReporter = struct {
     filename: []const u8,
@@ -39,39 +73,97 @@ const ErrorReporter = struct {
     }
 };
 
-fn parseDefinition(error_reporter: *ErrorReporter, text: []const u8) !?Definition {
+const ReportedError = error { Reported };
+fn parseDefinition(
+    allocator: std.mem.Allocator,
+    error_reporter: *ErrorReporter,
+    text: []const u8,
+) !?*Definition {
     var line_it = std.mem.split(u8, text, "\n");
     const first_line = line_it.next().?;
     if (!std.mem.eql(u8, first_line, "c89")) {
         std.debug.panic("first line not being 'c89', instead is '{s}', not implemented", .{first_line});
     }
     var line_offset: u32 = 1;
-    const second_line = line_it.next() orelse {
-        error_reporter.report(line_offset, "definition is missing it's second line", .{});
-        return null;
+    const def = blk:{
+        const def_line_original = line_it.next() orelse {
+            error_reporter.report(line_offset, "definition is missing it's second line", .{});
+            return ReportedError.Reported;
+        };
+        var remaining_line = def_line_original;
+        var abi_type = peel(&remaining_line) orelse {
+            error_reporter.report(line_offset, "definition line is empty? '{s}'", .{def_line_original});
+            return ReportedError.Reported;
+        };
+        if (std.mem.eql(u8, abi_type, "define")) {
+            const name = peel(&remaining_line) orelse {
+                error_reporter.report(line_offset, "'define' requires a name and value", .{});
+                return ReportedError.Reported;
+            };
+            const value_start = skipWhitespace(remaining_line, 0);
+            if (value_start == remaining_line.len) {
+                error_reporter.report(line_offset, "'define {s}' has a name but missing a value", .{name});
+                return ReportedError.Reported;
+            }
+            const value = std.mem.trimRight(u8, remaining_line[value_start..], " ");
+            const def = try allocator.create(Definition);
+            def.* = .{
+                .headers = &[_][]const u8 {},
+                .def = .{ .define = .{
+                    .name = name,
+                    .value = value,
+                }},
+            };
+            break :blk def;
+        } else {
+            error_reporter.report(line_offset, "unknown abi type '{s}'", .{abi_type});
+            return ReportedError.Reported;
+        }
     };
-    line_offset += 1;
-    _ = second_line;
 
-    error_reporter.report(line_offset, "not implemented", .{});
-    return null;
+    var headers = std.ArrayListUnmanaged([]const u8) { };
+    defer headers.deinit(allocator);
+    while (true) {
+        line_offset += 1;
+        const line_original = line_it.next() orelse break;
+        var remaining_line = line_original;
+        var directive = peel(&remaining_line) orelse break;
+        if (std.mem.eql(u8, directive, "header")) {
+            const name = peel(&remaining_line) orelse {
+                error_reporter.report(line_offset, "'header' requires a name", .{});
+                return ReportedError.Reported;
+            };
+            if (peel(&remaining_line)) |_| {
+                error_reporter.report(line_offset, "'header' got too many arguments", .{});
+                return ReportedError.Reported;
+            }
+            try headers.append(allocator, name);
+        } else {
+            error_reporter.report(line_offset, "unknown directive '{s}'", .{directive});
+            return ReportedError.Reported;
+        }
+    }
+    def.*.headers = headers.toOwnedSlice(allocator);
+    return def;
 }
 
 const Parser = struct {
+    allocator: std.mem.Allocator,
     filename: []const u8,
     contents: []const u8,
-    definitions: std.ArrayList(Definition),
+    definitions: std.ArrayListUnmanaged(*Definition),
     total_errors: u32 = 0,
     pub fn init(allocator: std.mem.Allocator, filename: []const u8, contents: []const u8) Parser {
         return .{
+            .allocator = allocator,
             .filename = filename,
             .contents = contents,
-            .definitions = std.ArrayList(Definition).init(allocator),
+            .definitions = std.ArrayListUnmanaged(*Definition) { },
         };
     }
     // TODO: deini?
 
-    
+
     fn genHeaders(self: *Parser) !void {
 
         var started: ?struct { ptr: [*]const u8, line_number: u32 } = null;
@@ -81,7 +173,7 @@ const Parser = struct {
         while (line_it.next()) |line_untrimmed| {
             line_number += 1;
             // TODO: assert that line has no '\r\n'?
-            const line = std.mem.trim(u8, line_untrimmed, " \t");
+            const line = std.mem.trim(u8, line_untrimmed, " ");
             //std.log.info("line {d} '{s}'", .{line_number, line});
 
             if (line.len == 0) {
@@ -106,9 +198,10 @@ const Parser = struct {
             .base_line_number = line_number,
             .count = 0,
         };
-        if (try parseDefinition(&error_reporter, start[0 .. @ptrToInt(limit) - @ptrToInt(start)])) |def| {
+        const text = start[0 .. @ptrToInt(limit) - @ptrToInt(start)];
+        if (try parseDefinition(self.allocator, &error_reporter, text)) |def| {
             std.debug.assert(error_reporter.count == 0);
-            try self.definitions.append(def);
+            try self.definitions.append(self.allocator, def);
         } else {
             std.debug.assert(error_reporter.count > 0);
             self.total_errors += error_reporter.count;
@@ -128,7 +221,7 @@ const Definition = struct {
             name: []const u8,
             value: []const u8,
         };
-        
+
         const Type = union(enum) {
             builtin: struct {
                 name: []const u8,
@@ -146,17 +239,17 @@ const Definition = struct {
                 is_const: bool,
             },
         };
-        
+
         const ExternVar = struct {
             name: []const u8,
             type: *const Type,
         };
-        
+
         const Param = struct {
             name: []const u8,
             type: *const Type,
         };
-        
+
         const Function = struct {
             name: []const u8,
             return_type: *const Type,

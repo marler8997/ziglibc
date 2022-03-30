@@ -9,7 +9,7 @@ pub fn build(b: *std.build.Builder) void {
         const run = exe.run();
         run.addArg(b.pathFromRoot("capi.txt"));
         // TODO: not working yet
-        //b.getInstallStep().dependOn(&run.step);
+        b.getInstallStep().dependOn(&run.step);
     }
 
     const target = b.standardTargetOptions(.{});
