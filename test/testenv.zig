@@ -15,8 +15,7 @@ pub fn main() !u8 {
     const dirname = try std.fmt.allocPrint(arena.allocator(), "{s}.test.tmp", .{std.fs.path.basename(args[0])});
     try std.fs.cwd().deleteTree(dirname);
     try std.fs.cwd().makeDir(dirname);
-    const child = try std.ChildProcess.init(args, arena.allocator());
-    defer child.deinit();
+    var child = std.ChildProcess.init(args, arena.allocator());
     child.cwd = dirname;
     try child.spawn();
     const result = try child.wait();

@@ -165,6 +165,10 @@ export fn rand() callconv(.C) c_int {
     return @bitCast(c_int, @intCast(c_uint, global.rand.random().int(std.math.IntFittingRange(0, c.RAND_MAX))));
 }
 
+export fn abs(j: c_int) callconv(.C) c_int {
+    return if (j >= 0) j else -j;
+}
+
 // --------------------------------------------------------------------------------
 // string
 // --------------------------------------------------------------------------------
@@ -243,10 +247,12 @@ export fn strrchr(s: [*:0]const u8, char: c_int) callconv(.C) ?[*:0]const u8 {
 
 export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const u8 {
     trace.log("strstr {} {}", .{trace.fmtStr(s1), trace.fmtStr(s2)});
+    const s1_len = strlen(s1);
     const s2_len = strlen(s2);
     var i: usize = 0;
-    while (true) {
-        if (0 == strncmp(s1, s2, s2_len)) return s1 + i;
+    while (i + s2_len <= s1_len) : (i += 1) {
+        const search = s1 + i;
+        if (0 == strncmp(search, s2, s2_len)) return search;
     }
     return null;
 }
@@ -454,9 +460,12 @@ export fn getc(stream: *c.FILE) callconv(.C) c_int {
     return c.EOF;
 }
 
-comptime {
-    @export(getc, .{ .name = "fgetc" });
-}
+// NOTE: this causes a bug in the Zig compiler, but it shouldn't
+//       for now I'm working around it by making a wrapper function
+//comptime {
+//    @export(getc, .{ .name = "fgetc" });
+//}
+export fn fgetc(stream: *c.FILE) callconv(.C) c_int { return getc(stream); }
 
 export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (stream.eof != 0) @panic("ungetc, eof not 0 not implemented");
@@ -919,57 +928,62 @@ export fn strftime(s: [*]u8, maxsize: usize, format: [*:0]const u8, timeptr: *co
 // --------------------------------------------------------------------------------
 export fn isalnum(char: c_int) callconv(.C) c_int {
     trace.log("isalnum {}", .{char});
-    return @boolToInt(std.ascii.isAlNum(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isAlNum(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn toupper(char: c_int) callconv(.C) c_int {
     trace.log("toupper {}", .{char});
-    return std.ascii.toUpper(std.math.cast(u8, char) catch return char);
+    return std.ascii.toUpper(std.math.cast(u8, char) orelse return char);
 }
 
 export fn tolower(char: c_int) callconv(.C) c_int {
     trace.log("tolower {}", .{char});
-    return std.ascii.toLower(std.math.cast(u8, char) catch return char);
+    return std.ascii.toLower(std.math.cast(u8, char) orelse return char);
 }
 
 export fn isspace(char: c_int) callconv(.C) c_int {
     trace.log("isspace {}", .{char});
-    return @boolToInt(std.ascii.isSpace(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isSpace(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isxdigit(char: c_int) callconv(.C) c_int {
     trace.log("isxdigit {}", .{char});
-    return @boolToInt(std.ascii.isXDigit(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isXDigit(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn iscntrl(char: c_int) callconv(.C) c_int {
     trace.log("iscntrl {}", .{char});
-    return @boolToInt(std.ascii.isCntrl(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isCntrl(std.math.cast(u8, char) orelse return 0));
+}
+
+export fn isdigit(char: c_int) callconv(.C) c_int {
+    trace.log("isdigit {}", .{char});
+    return @boolToInt(std.ascii.isDigit(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isalpha(char: c_int) callconv(.C) c_int {
     trace.log("isalhpa {}", .{char});
-    return @boolToInt(std.ascii.isAlpha(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isAlpha(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isgraph(char: c_int) callconv(.C) c_int {
     trace.log("isgraph {}", .{char});
-    return @boolToInt(std.ascii.isGraph(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isGraph(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn islower(char: c_int) callconv(.C) c_int {
     trace.log("islower {}", .{char});
-    return @boolToInt(std.ascii.isLower(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isLower(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isupper(char: c_int) callconv(.C) c_int {
     trace.log("isupper {}", .{char});
-    return @boolToInt(std.ascii.isUpper(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isUpper(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn ispunct(char: c_int) callconv(.C) c_int {
     trace.log("ispunct {}", .{char});
-    return @boolToInt(std.ascii.isPunct(std.math.cast(u8, char) catch return 0));
+    return @boolToInt(std.ascii.isPunct(std.math.cast(u8, char) orelse return 0));
 }
 
 // --------------------------------------------------------------------------------
