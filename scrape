@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir=$(dirname $(readlink -f ${BASH_SOURCE[0]}))
+
+dir=$script_dir/zig-universal-headers
+if [ ! -d $dir ]; then
+    set -x
+    rm -rf ${dir}.cloning
+    git clone https://github.com/ziglang/universal-headers ${dir}.cloning
+    git -C ${dir}.cloning checkout 8658109ef163558cc0e41a527abefb0f3a54e930 -b oct_21_2022
+    mv ${dir}.cloning $dir
+    set +x
+fi
+
+set -x
+
+#zig run uhscrape.zig -- uh.json zig-universal-headers/headers/*
+zig run uhscrape.zig -- uh.json zig-universal-headers/headers/x86_64-linux-gnu.2.36
+
+rm -rf uh-out
+zig run uh.zig -- uh.json uh-out
