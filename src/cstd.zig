@@ -75,7 +75,6 @@ export fn abort() callconv(.C) noreturn {
 // TODO: should we detect and do something different if there is a '=' in name?
 export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
     trace.log("getenv '{s}'", .{std.mem.span(name)});
-    _ = name;
     return null; // not implemented
     //const name_len = std.mem.len(name);
     //var e: ?[*:0]u8 = environ;
@@ -83,7 +82,6 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
 
 export fn system(string: [*:0]const u8) callconv(.C) c_int {
     trace.log("system '{s}'", .{std.mem.span(string)});
-    _ = string;
     @panic("system function not implemented");
 }
 
@@ -378,7 +376,11 @@ export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
 // --------------------------------------------------------------------------------
 // signal
 // --------------------------------------------------------------------------------
-export fn signal(sig: c_int, func: fn (c_int) callconv(.C) void) void {
+const SignalFn = switch (builtin.zig_backend) {
+    .stage1 => fn(c_int) callconv(.C) void,
+    else => *const fn(c_int) callconv(.C) void,
+};
+export fn signal(sig: c_int, func: SignalFn) void {
     _ = sig;
     _ = func;
     @panic("signal not implemented");
@@ -469,7 +471,7 @@ export fn fgetc(stream: *c.FILE) callconv(.C) c_int { return getc(stream); }
 
 export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (stream.eof != 0) @panic("ungetc, eof not 0 not implemented");
-    _ = char; _ = stream;
+    _ = char;
     @panic("ungetc not implemented");
 }
 
@@ -693,7 +695,6 @@ export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) c
 
 export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
     trace.log("fflush {*}", .{stream});
-    _ = stream;
     return 0; // no-op since there's no buffering right now
 }
 
@@ -859,7 +860,6 @@ export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
 export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
     trace.log("longjmp {}", .{val});
     _ = env;
-    _ = val;
     @panic("longjmp not implemented");
 }
 
@@ -989,9 +989,13 @@ export fn ispunct(char: c_int) callconv(.C) c_int {
 // --------------------------------------------------------------------------------
 // assert
 // --------------------------------------------------------------------------------
-export fn assert(expression: c_int) callconv(.C) void {
-    trace.log("assert {}", .{expression});
-    if (expression == 0) {
-        abort();
-    }
+export fn __assert_fail(
+    expression: [*:0]const u8,
+    file: [*:0]const u8,
+    line: c_int,
+    func: [*:0]const u8,
+) callconv(.C) void {
+    trace.log("assert failed '{s}' ('{s}' line {d} function '{s}')", .{
+        expression, file, line, func });
+    abort();
 }

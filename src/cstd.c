@@ -1,4 +1,5 @@
 // Some of ziglibc is currently in C to have vararg support
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>

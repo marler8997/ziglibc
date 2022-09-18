@@ -80,6 +80,7 @@ void perror(const char *s);
 
 #if __STDC_VERSION__ >= 199901L
     int snprintf(char * restrict s, size_t n, const char * restrict format, ...);
+    int vsnprintf(char *restrict s, size_t n, const char * restrict format, va_list arg);
 #endif
 
 // NOTE: this stuff is defined by POSIX, not libc, but they need
@@ -89,6 +90,12 @@ void perror(const char *s);
     #define STDOUT_FILENO 1
     #define STDERR_FILENO 2
     FILE *popen(const char *command, const char *mode);
+#endif
+
+// NOTE: this stuff is defined by linux, not libc, but they need
+//       to live in this header
+#if 1
+    #define FOPEN_MAX 999
 #endif
 
 

@@ -1,5 +1,6 @@
 /// Symbols that we need to export if our library is to be used
 /// alongside the glibc start code (i.e. crtn.o, etc)
+const builtin = @import("builtin");
 const std = @import("std");
 
 const c = struct {
@@ -24,13 +25,14 @@ export fn __libc_csu_fini() callconv(.C) void {
 export fn __libc_start_main(
     argc: c_int,
     argv: [*:null]?[*:0]u8,
-    init: fn main(argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
+    init: switch (builtin.zig_backend) {
+        .stage1 => fn(argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
+        else => *const fn(argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
+    },
     fini: fn() callconv(.C) void,
     rtld_fini: fn() callconv(.C) void,
     stack_end: *anyopaque,
 ) callconv(.C) noreturn {
-    _ = argc;
-    _ = argv;
     _ = init;
     _ = fini;
     _ = rtld_fini;

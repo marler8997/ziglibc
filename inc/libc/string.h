@@ -37,4 +37,14 @@ char* strsignal(int);
 //       so for now I'm just including it here
 char *strdup(const char *s);
 
+// NOTE: strlcpy and strlcat appear in some libc implementations (rejected by glibc though)
+//       they don't appear to be a part of any standard.
+//       It appears that the libc-test project expects them to be available in <string.h>
+//       however other docs put them in <bsd/string.h>.
+#if 1
+    size_t strlcpy(char *dst, const char *src, size_t size);
+    size_t strlcat(char *dst, const char *src, size_t size);
+#endif
+
+
 #endif /* _STRING_H */
