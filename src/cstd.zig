@@ -989,7 +989,7 @@ export fn ispunct(char: c_int) callconv(.C) c_int {
 // --------------------------------------------------------------------------------
 // assert
 // --------------------------------------------------------------------------------
-export fn __assert_fail(
+export fn __zassert_fail(
     expression: [*:0]const u8,
     file: [*:0]const u8,
     line: c_int,

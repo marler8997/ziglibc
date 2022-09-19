@@ -20,4 +20,7 @@ long pathconf(const char *path, int name);
 int link(const char *path1, const char *path2);
 unsigned sleep(unsigned seconds);
 
+int unlink(const char *path);
+void _exit(int status);
+
 #endif /* _UNISTD_H */

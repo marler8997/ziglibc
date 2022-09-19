@@ -11,8 +11,9 @@ typedef int sig_atomic_t;
 void (*signal(int sig, void (*func)(int)))(int);
 
 
-// TODO: these are posix definitions for the signal.h libc header
+/* TODO: these are posix definitions for the signal.h libc header */
 #if 1
+    #include "private/restrict.h"
     #include "../posix/private/sigset_t.h"
     #include "../posix/private/pid_t.h"
     #include "../posix/private/uid_t.h"
@@ -39,8 +40,10 @@ void (*signal(int sig, void (*func)(int)))(int);
       int sa_flags;
       void (*sa_sigaction)(int, siginfo_t *,void*);
     };
-    int sigaction(int sig, const struct sigaction *restrict act,
-        struct sigaction *restrict oact);
+    int sigaction(
+        int sig,
+        const struct sigaction *__zrestrict act,
+        struct sigaction *__zrestrict oact);
 #endif
 
 

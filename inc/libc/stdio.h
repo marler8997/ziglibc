@@ -54,7 +54,7 @@ int sprintf(char *s, const char *format, ...);
 int sscanf(const char *s, const char *format, ...);
 //int vfprintf(FILE *stream, const char *format, va_list arg);
 //int vprintf(const char *format, va_list arg);
-//int vsprintf(char *s, const char *format, va_list arg);
+int vsprintf(char *s, const char *format, va_list arg);
 int fgetc(FILE *stream);
 char *fgets(char *s, int n, FILE *stream);
 int fputc(int c, FILE *stream);
@@ -90,6 +90,7 @@ void perror(const char *s);
     #define STDOUT_FILENO 1
     #define STDERR_FILENO 2
     FILE *popen(const char *command, const char *mode);
+    FILE *fdopen(int filedes, const char *mode);
 #endif
 
 // NOTE: this stuff is defined by linux, not libc, but they need

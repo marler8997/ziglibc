@@ -8,8 +8,7 @@ pub fn build(b: *std.build.Builder) void {
         const exe = b.addExecutable("genheaders", "src" ++ std.fs.path.sep_str ++ "genheaders.zig");
         const run = exe.run();
         run.addArg(b.pathFromRoot("capi.txt"));
-        // TODO: not working yet
-        b.getInstallStep().dependOn(&run.step);
+        b.step("genheaders", "Generate C Headers").dependOn(&run.step);
     }
 
     const target = b.standardTargetOptions(.{});
@@ -149,6 +148,7 @@ pub fn build(b: *std.build.Builder) void {
     addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addLua(b, target, mode, libc_only_std_static, zig_start);
     _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
+    _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
@@ -331,6 +331,74 @@ fn addCmph(
     }
 
     const step = b.step("cmph", "build the cmph tool");
+    step.dependOn(&exe.install_step.?.step);
+
+    return exe;
+}
+
+fn addYacc(
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    libc_only_std_static: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
+    zig_posix: *std.build.LibExeObjStep,
+) *std.build.LibExeObjStep {
+    const repo = GitRepoStep.create(b, .{
+        .url = "https://github.com/ibara/yacc",
+        .sha = "1a4138ce2385ec676c6d374245fda5a9cd2fbee2",
+        .branch = null,
+    });
+
+    const config_step = b.addWriteFile(
+        b.pathJoin(&.{repo.path, "config.h"}),
+        \\// for simplicity just don't supported __unused
+        \\#define __unused
+        \\// for simplicity we're just not supporting noreturn
+        \\#define __dead
+        \\//#define HAVE_PROGNAME
+        \\//#define HAVE_ASPRINTF
+        \\//#define HAVE_PLEDGE
+        \\//#define HAVE_REALLOCARRAY
+        \\#define HAVE_STRLCPY
+        \\
+    );
+    config_step.step.dependOn(&repo.step);
+
+    const exe = b.addExecutable("yacc", null);
+    exe.setTarget(target);
+    exe.setBuildMode(mode);
+    // TODO: use .install() uncomment when it links
+    //exe.install();
+    _ = b.addInstallArtifact(exe);
+    exe.step.dependOn(&repo.step);
+    exe.step.dependOn(&config_step.step);
+    const repo_path = repo.getPath(&exe.step);
+    var files = std.ArrayList([]const u8).init(b.allocator);
+    const sources = [_][]const u8 {
+        "closure.c", "error.c", "lalr.c", "lr0.c", "main.c", "mkpar.c", "output.c", "reader.c",
+        "skeleton.c", "symtab.c", "verbose.c", "warshall.c", "portable.c",
+    };
+    for (sources) |src| {
+        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+    }
+
+    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+        "-std=c90",
+    });
+
+    exe.addIncludePath("inc/libc");
+    exe.addIncludePath("inc/posix");
+    exe.linkLibrary(libc_only_std_static);
+    exe.linkLibrary(zig_start);
+    exe.linkLibrary(zig_posix);
+    // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
+//    if (target.getOs().tag == .windows) {
+//        exe.linkSystemLibrary("ntdll");
+//        exe.linkSystemLibrary("kernel32");
+//    }
+
+    const step = b.step("yacc", "build the yacc tool");
     step.dependOn(&exe.install_step.?.step);
 
     return exe;
