@@ -7,6 +7,7 @@ const c = @cImport({
     @cInclude("setjmp.h");
     @cInclude("locale.h");
     @cInclude("time.h");
+    @cInclude("signal.h");
 });
 
 const trace = @import("trace.zig");
@@ -380,9 +381,29 @@ const SignalFn = switch (builtin.zig_backend) {
     .stage1 => fn(c_int) callconv(.C) void,
     else => *const fn(c_int) callconv(.C) void,
 };
-export fn signal(sig: c_int, func: SignalFn) callconv(.C) void {
-    _ = sig;
-    _ = func;
+export fn signal(sig: c_int, func: SignalFn) callconv(.C) ?SignalFn {
+    if (builtin.os.tag == .linux) {
+        var action = std.os.Sigaction{
+            .handler = .{ .handler = func },
+            .mask = std.os.linux.empty_sigset,
+            .flags = std.os.SA.RESTART,
+            .restorer = null,
+        };
+        var old_action: std.os.Sigaction = undefined;
+        switch (std.os.errno(std.os.linux.sigaction(
+            @intCast(u6, sig),
+            &action,
+            &old_action,
+        ))) {
+            .SUCCESS => return old_action.handler.handler,
+            else => |e| {
+                errno = @enumToInt(e);
+                // translate-c having a hard time with this one
+                //return c.SIG_ERR;
+                return @intToPtr(?SignalFn, @bitCast(usize, @as(isize, -1)));
+            },
+        }
+    }
     @panic("signal not implemented");
 }
 
