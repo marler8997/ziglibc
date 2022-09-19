@@ -364,6 +364,13 @@ fn addYacc(
         \\
     );
     config_step.step.dependOn(&repo.step);
+    const gen_progname_step = b.addWriteFile(
+        b.pathJoin(&.{repo.path, "progname.c"}),
+        \\// workaround __progname not defined, https://github.com/ibara/yacc/pull/1
+        \\char *__progname;
+        \\
+    );
+    gen_progname_step.step.dependOn(&repo.step);
 
     const exe = b.addExecutable("yacc", null);
     exe.setTarget(target);
@@ -373,11 +380,12 @@ fn addYacc(
     _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
+    exe.step.dependOn(&gen_progname_step.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
     const sources = [_][]const u8 {
         "closure.c", "error.c", "lalr.c", "lr0.c", "main.c", "mkpar.c", "output.c", "reader.c",
-        "skeleton.c", "symtab.c", "verbose.c", "warshall.c", "portable.c",
+        "skeleton.c", "symtab.c", "verbose.c", "warshall.c", "portable.c", "progname.c",
     };
     for (sources) |src| {
         files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;

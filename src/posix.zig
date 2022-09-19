@@ -11,6 +11,10 @@ const c = @cImport({
     @cInclude("sys/time.h");
 });
 
+const cstd = struct {
+    extern fn __zreserveFile() callconv(.C) ?*c.FILE;
+};
+
 const trace = @import("trace.zig");
 
 const global = struct {
@@ -96,13 +100,33 @@ export fn strdup(s: [*:0]const u8) callconv(.C) ?[*:0]u8 {
 }
 
 // --------------------------------------------------------------------------------
+// stdlib
+// --------------------------------------------------------------------------------
+export fn mkstemp(template: [*:0]u8) callconv(.C) c_int {
+    trace.log("mkstemp '{}'", .{trace.fmtStr(template)});
+    @panic("mkstemp not implemented");
+}
+
+// --------------------------------------------------------------------------------
 // stdio
 // --------------------------------------------------------------------------------
-export fn popen(command: [*:0]const u8, mode: [*:0]const u8) *c.FILE {
+export fn popen(command: [*:0]const u8, mode: [*:0]const u8) callconv(.C) *c.FILE {
     trace.log("popen '{}' mode='{s}'", .{trace.fmtStr(command), mode});
     @panic("popen not implemented");
 }
 
+export fn fdopen(fd: c_int, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
+    trace.log("fdopen {d} mode={s}", .{fd, mode});
+    if (builtin.os.tag == .windows) @panic("not impl");
+
+    const file = cstd.__zreserveFile() orelse {
+        c.errno = c.ENOMEM;
+        return null;
+    };
+    file.fd = fd;
+    file.eof = 0;
+    return file;
+}
 
 // --------------------------------------------------------------------------------
 // unistd
@@ -110,6 +134,33 @@ export fn popen(command: [*:0]const u8, mode: [*:0]const u8) *c.FILE {
 export fn access(path: [*:0]const u8, amode: c_int) callconv(.C) c_int {
     trace.log("access '{}' mode=0x{x}", .{trace.fmtStr(path), amode});
     @panic("acces not implemented");
+}
+
+export fn unlink(path: [*:0]const u8) callconv(.C) c_int {
+    if (builtin.os.tag == .windows)
+        @panic("windows unlink not implemented");
+
+    switch (std.os.errno(std.os.system.unlink(path))) {
+        .SUCCESS => return 0,
+        else => |e| {
+            c.errno = @enumToInt(e);
+            return -1;
+        }
+    }
+}
+
+export fn _exit(status: c_int) callconv(.C) noreturn {
+    if (builtin.os.tag == .windows) {
+        std.os.windows.kernel32.ExitProcess(status);
+    }
+    if (builtin.os.tag == .wasi) {
+        std.os.wasi.proc_exit(status);
+    }
+    if (builtin.os.tag == .linux and !builtin.single_threaded) {
+        // TODO: is this right?
+        std.os.linux.exit_group(status);
+    }
+    std.os.system.exit(status);
 }
 
 // --------------------------------------------------------------------------------

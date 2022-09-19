@@ -380,7 +380,7 @@ const SignalFn = switch (builtin.zig_backend) {
     .stage1 => fn(c_int) callconv(.C) void,
     else => *const fn(c_int) callconv(.C) void,
 };
-export fn signal(sig: c_int, func: SignalFn) void {
+export fn signal(sig: c_int, func: SignalFn) callconv(.C) void {
     _ = sig;
     _ = func;
     @panic("signal not implemented");
@@ -432,6 +432,11 @@ const global = struct {
 export const stdin: *c.FILE = &global.files[0];
 export const stdout: *c.FILE = &global.files[1];
 export const stderr: *c.FILE = &global.files[2];
+
+// used by posix.zig
+export fn __zreserveFile() callconv(.C) ?*c.FILE {
+    return global.reserveFile();
+}
 
 export fn remove(filename: [*:0]const u8) callconv(.C) c_int {
     trace.log("remove '{s}'", .{filename});
@@ -637,6 +642,12 @@ export fn rewind(stream: *c.FILE) callconv(.C) void {
         stream.errno = 0;
     }
     // TODO: should we set stream.errno if fseek failed?
+}
+
+// TODO: why is there a putc and an fputc function? They seem to be equivalent
+//       so what's the history?
+comptime {
+    @export(fputc, .{ .name = "putc" });
 }
 
 export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
@@ -984,6 +995,11 @@ export fn isupper(char: c_int) callconv(.C) c_int {
 export fn ispunct(char: c_int) callconv(.C) c_int {
     trace.log("ispunct {}", .{char});
     return @boolToInt(std.ascii.isPunct(std.math.cast(u8, char) orelse return 0));
+}
+
+export fn isprint(char: c_int) callconv(.C) c_int {
+    trace.log("isprint {}", .{char});
+    return @boolToInt(std.ascii.isPrint(std.math.cast(u8, char) orelse return 0));
 }
 
 // --------------------------------------------------------------------------------
