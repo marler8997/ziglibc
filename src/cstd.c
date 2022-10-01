@@ -10,6 +10,12 @@ size_t _fwrite_buf(const char *ptr, size_t size, FILE *stream);
 size_t _formatCInt(char *buf, int value);
 size_t _formatCUint(char *buf, int value);
 
+static size_t stringPrintLen(const char *s, unsigned precision) {
+    size_t len = 0;
+    for (; s[len] && len < (size_t)precision; len++) { }
+    return len;
+}
+
 struct Writer {
   // if len is 0, then s is null-terminated
   // returns the total number of bytes written
@@ -36,15 +42,57 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
       }
     }
     fmt = next_percent_char + 1;
+
+    // TODO: parse flags
+    if (fmt[0] == '-' || fmt[0] == '+' || fmt[0] == ' ' || fmt[0] == '#' || fmt[0] == '0') {
+        fprintf(stderr, "error: vformat flag '%c' is not implemented\n", fmt[0]);
+        return -1;
+    }
+
+    // TODO: parse width
+    if (fmt[0] == '*') {
+        //width = va_arg(args, int);
+        //fmt++;
+        fprintf(stderr, "error: vformat number width '*' not implemented\n");
+        return -1;
+    } else if (fmt[0] >= '0' && fmt[0] <= '9') {
+        fprintf(stderr, "error: vformat number width not implemented\n");
+        return -1;
+    }
+
+    static const int PRECISION_NONE = -1;
+    int precision = PRECISION_NONE;
+    if (fmt[0] == '.') {
+      fmt++;
+      if (fmt[0] == '*') {
+        precision = va_arg(args, int);
+        fmt++;
+      } else if (fmt[0] >= '0' && fmt[0] <= '9') {
+        fprintf(stderr, "error: vformat precision number not implemented\n");
+        return -1;
+      } else {
+        // TODO: don't actually print an error message like this
+        // TODO: set errno
+        fprintf(stderr, "error: invalid precision specifier : .%s\n", fmt);
+        return -1;
+      }
+    }
+
     if (fmt[0] == 's') {
       const char *s = va_arg(args, const char *);
       // TODO: is this how we should be handling NULL string pointers?
       if (s == NULL) s = "(null)";
-      size_t written = writer->write(writer, s, 0);
+
+      size_t written = writer->write(writer, s, (precision == PRECISION_NONE) ? 0 : stringPrintLen(s, precision));
       *out_written += written;
-      if (s[written] != 0) return -1; // error
+      // sanity check
+      if ( (precision == PRECISION_NONE) && (s[written] != 0) ) return -1; // error
       fmt++;
     } else if (fmt[0] == 'd') {
+      if (precision != PRECISION_NONE) {
+         fprintf(stderr, "error: precision not implemented for 'd' specifier\n");
+         return -1;
+      }
       char buf[100];
       const int value = va_arg(args, int);
       size_t len = _formatCInt(buf, value);
@@ -53,6 +101,10 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
       if (written != len) return -1; // error
       fmt++;
     } else if (fmt[0] == 'u') {
+      if (precision != PRECISION_NONE) {
+         fprintf(stderr, "error: precision not implemented for 'u' specifier\n");
+         return -1;
+      }
       char buf[100];
       const unsigned value = va_arg(args, unsigned);
       size_t len = _formatCUint(buf, value);
