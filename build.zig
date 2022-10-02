@@ -386,9 +386,7 @@ fn addYacc(
     const exe = b.addExecutable("yacc", null);
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    // TODO: use .install() uncomment when it links
-    //exe.install();
-    _ = b.addInstallArtifact(exe);
+    exe.install();
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
     exe.step.dependOn(&gen_progname_step.step);
