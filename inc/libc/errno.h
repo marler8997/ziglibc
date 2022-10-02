@@ -11,6 +11,7 @@ extern int errno;
     #define ENOMEM 12
     #define EACCES 13
     #define EEXIST 17
+    #define EINVAL 22
     #define EWOULDBLOCK 140
 #endif
 
