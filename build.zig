@@ -125,6 +125,14 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
+        const exe = addTest("strto", b, target, mode, libc_only_std_static, zig_start);
+        const run_step = exe.run();
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
+    {
         const exe = addTest("getopt", b, target, mode, libc_only_std_static, zig_start);
         addPosix(exe, libc_only_posix);
         {
@@ -165,6 +173,7 @@ fn addTest(
     zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
     const exe = b.addExecutable(name, "test" ++ std.fs.path.sep_str ++ name ++ ".c");
+    exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8 { });
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
     exe.linkLibrary(libc_only_std_static);
@@ -208,6 +217,8 @@ fn addLibcTest(
         b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
     };
 
+    // strtol, it seems there might be some disagreement between libc-test/glibc
+    // about how strtoul interprets negative numbers, so leaving out strtol for now
     inline for (.{ "argv", "clock_gettime", "string" } ) |name| {
         const exe = b.addExecutable("libc-test-functional-" ++ name, b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}));
         exe.addCSourceFiles(common_src, &[_][]const u8 {});

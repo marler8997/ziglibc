@@ -2,6 +2,9 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const c = @cImport({
+    // problem with LONG_MIN/LONG_MAX, they are currently assuming 64 bit
+    //@cInclude("limits.h");
+    @cInclude("errno.h");
     @cInclude("stdio.h");
     @cInclude("stdlib.h");
     @cInclude("setjmp.h");
@@ -75,14 +78,14 @@ export fn abort() callconv(.C) noreturn {
 // TODO: can name be null?
 // TODO: should we detect and do something different if there is a '=' in name?
 export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
-    trace.log("getenv '{s}'", .{std.mem.span(name)});
+    trace.log("getenv {}", .{trace.fmtStr(name)});
     return null; // not implemented
     //const name_len = std.mem.len(name);
     //var e: ?[*:0]u8 = environ;
 }
 
 export fn system(string: [*:0]const u8) callconv(.C) c_int {
-    trace.log("system '{s}'", .{std.mem.span(string)});
+    trace.log("system {}", .{trace.fmtStr(string)});
     @panic("system function not implemented");
 }
 
@@ -356,15 +359,116 @@ export fn strtok(s1: ?[*:0]u8, s2: [*:0]const u8) callconv(.C) ?[*:0]u8 {
     return start;
 }
 
+fn strto(
+    comptime T: type,
+    str: [*:0]const u8,
+    optional_endptr: ?*[*:0]const u8,
+    optional_base: c_int
+) T {
+    var next = str;
+
+    // skip whitespace
+    while (isspace(next[0]) != 0) : (next += 1) { }
+    const start = next;
+
+    const sign : enum { pos, neg } = blk: {
+        if (next[0] == '-') {
+            next += 1;
+            break :blk .neg;
+        }
+        if (next[0] == '+') next += 1;
+        break :blk .pos;
+    };
+
+    const base = blk: {
+        if (optional_base != 0) {
+            if (optional_base > 36) {
+                if (optional_endptr) |endptr| endptr.* = next;
+                errno = c.EINVAL;
+                return 0;
+            }
+            if (optional_base == 16 and next[0] == '0' and (next[1] == 'x' or next[1] == 'X')) {
+                next += 2;
+            }
+            break :blk @intCast(u8, optional_base);
+        }
+        if (next[0] == '0') {
+            if (next[1] == 'x' or next[1] == 'X') {
+                next += 2;
+                break :blk 16;
+            }
+            next += 1;
+            break :blk 8;
+        }
+        break :blk 10;
+    };
+
+    var digit_start = next;
+    var x: T = 0;
+
+    while (true) : (next += 1) {
+        const ch = next[0];
+        if (ch == 0) break;
+        const digit = std.math.cast(T, std.fmt.charToDigit(ch, base) catch break) orelse {
+            if (optional_endptr) |endptr| endptr.* = next;
+            errno = c.ERANGE;
+            return 0;
+        };
+        if (x != 0) x = std.math.mul(T, x, std.math.cast(T, base) orelse {
+            errno = c.EINVAL;
+            return 0;
+        }) catch {
+            if (optional_endptr) |endptr| endptr.* = next;
+            errno = c.ERANGE;
+            return switch (sign) { .neg => std.math.minInt(T), .pos => std.math.maxInt(T) };
+        };
+        x = switch (sign) {
+            .pos => std.math.add(T, x, digit) catch {
+                if (optional_endptr) |endptr| endptr.* = next + 1;
+                errno = c.ERANGE;
+                return switch (sign) { .neg => std.math.minInt(T), .pos => std.math.maxInt(T) };
+            },
+            .neg => std.math.sub(T, x, digit) catch {
+                if (optional_endptr) |endptr| endptr.* = next + 1;
+                errno = c.ERANGE;
+                return switch (sign) { .neg => std.math.minInt(T), .pos => std.math.maxInt(T) };
+            },
+        };
+    }
+
+    if (optional_endptr) |endptr| endptr.* = next;
+    if (next == digit_start) {
+        errno = c.EINVAL; // TODO: is this right?
+    } else {
+        trace.log("strto str='{s}' result={}", .{start[0 .. @ptrToInt(next) - @ptrToInt(start)], x});
+    }
+    return x;
+}
+
 export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64 {
     _ = nptr;
     _ = endptr;
     @panic("strtod not implemented");
 }
 
-export fn strtoul(nptr: [*:0]const u8, endptr: ?*[*]u8, base: c_int) callconv(.C) c_ulong {
-    trace.log("strtoul '{}' endptr={*} base={}", .{trace.fmtStr(nptr), endptr, base});
-    @panic("strtoul not implemented");
+export fn strtol(nptr: [*:0]const u8, endptr: ?*[*:0]const u8, base: c_int) callconv(.C) c_long {
+    trace.log("strtol {} endptr={*} base={}", .{trace.fmtStr(nptr), endptr, base});
+    return strto(c_long, nptr, endptr, base);
+}
+
+export fn strtoll(nptr: [*:0]const u8, endptr: ?*[*:0]const u8, base: c_int) callconv(.C) c_longlong {
+    trace.log("strtoll {s} endptr={*} base={}", .{trace.fmtStr(nptr), endptr, base});
+    return strto(c_longlong, nptr, endptr, base);
+}
+
+export fn strtoul(nptr: [*:0]const u8, endptr: ?*[*:0]u8, base: c_int) callconv(.C) c_ulong {
+    trace.log("strtoul {} endptr={*} base={}", .{trace.fmtStr(nptr), endptr, base});
+    return strto(c_ulong, nptr, endptr, base);
+}
+
+export fn strtoull(nptr: [*:0]const u8, endptr: ?*[*:0]u8, base: c_int) callconv(.C) c_ulonglong {
+    trace.log("strtoull {} endptr={*} base={}", .{trace.fmtStr(nptr), endptr, base});
+    return strto(c_ulonglong, nptr, endptr, base);
 }
 
 export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
@@ -460,12 +564,12 @@ export fn __zreserveFile() callconv(.C) ?*c.FILE {
 }
 
 export fn remove(filename: [*:0]const u8) callconv(.C) c_int {
-    trace.log("remove '{s}'", .{filename});
+    trace.log("remove {}", .{trace.fmtStr(filename)});
     @panic("remove not implemented");
 }
 
 export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
-    trace.log("remove '{s}' '{s}'", .{old, new});
+    trace.log("remove {} {}", .{trace.fmtStr(old), trace.fmtStr(new)});
     @panic("rename not implemented");
 }
 
@@ -546,7 +650,7 @@ export fn feof(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
-    trace.log("fopen '{s}' mode={s}", .{filename, mode});
+    trace.log("fopen {} mode={}", .{trace.fmtStr(filename), trace.fmtStr(mode)});
     if (builtin.os.tag == .windows) {
         var create_disposition: u32 = std.os.windows.OPEN_EXISTING;
         var access: u32 = 0;
@@ -559,7 +663,7 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
             } else if (mode_char == 'b') {
                 // not really sure what this is supposed to do yet, ignore it for now
             } else {
-                std.debug.panic("unhandled open flag '{c}' (from '{s}')", .{ mode_char, mode });
+                std.debug.panic("unhandled open flag '{c}' (from {})", .{ mode_char, trace.fmtStr(mode) });
             }
         }
         const fd = windows.CreateFileA(
@@ -593,7 +697,7 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
         } else if (mode_char == 'b') {
             // not really sure what this is supposed to do yet, ignore it for now
         } else {
-            std.debug.panic("unhandled open flag '{c}' (from '{s}')", .{ mode_char, mode });
+            std.debug.panic("unhandled open flag '{c}' (from {})", .{ mode_char, trace.fmtStr(mode) });
         }
     }
     const fd = std.os.system.open(filename, flags, 0o666);
@@ -731,12 +835,12 @@ export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
 }
 
 export fn puts(s: [*:0]const u8) callconv(.C) c_int {
-    trace.log("puts '{}'", .{trace.fmtStr(s)});
+    trace.log("puts {}", .{trace.fmtStr(s)});
     return fputs(s, stdout);
 }
 
 export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
-    trace.log("fputs '{}' stream={*}", .{trace.fmtStr(s), stream});
+    trace.log("fputs {} stream={*}", .{trace.fmtStr(s), stream});
     // NOTE: this is inneficient
     //       Maybe I could do a writev?
     //       Or maybe I could make 2 write calls with a locking mechanism?
@@ -814,7 +918,7 @@ export fn ferror(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn perror(s: [*:0]const u8) callconv(.C) void {
-    trace.log("perror '{}'", .{trace.fmtStr(s)});
+    trace.log("perror {}", .{trace.fmtStr(s)});
     @panic("perror not implemented");
 }
 
@@ -825,6 +929,18 @@ export fn _formatCInt(buf: [*]u8, value: c_int, base: u8) callconv(.C) usize {
     return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
 }
 export fn _formatCUint(buf: [*]u8, value: c_uint, base: u8) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
+}
+export fn _formatCLong(buf: [*]u8, value: c_long, base: u8) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
+}
+export fn _formatCUlong(buf: [*]u8, value: c_ulong, base: u8) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
+}
+export fn _formatCLonglong(buf: [*]u8, value: c_longlong, base: u8) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
+}
+export fn _formatCUlonglong(buf: [*]u8, value: c_ulonglong, base: u8) callconv(.C) usize {
     return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
 }
 

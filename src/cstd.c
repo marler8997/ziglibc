@@ -4,12 +4,17 @@
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 // TODO: restrict pointers?
 size_t _fwrite_buf(const char *ptr, size_t size, FILE *stream);
 size_t _formatCInt(char *buf, int value, uint8_t base);
 size_t _formatCUint(char *buf, unsigned value, uint8_t base);
+size_t _formatCLong(char *buf, long value, uint8_t base);
+size_t _formatCUlong(char *buf, unsigned long value, uint8_t base);
+size_t _formatCLonglong(char *buf, long long value, uint8_t base);
+size_t _formatCUlonglong(char *buf, unsigned long long value, uint8_t base);
 
 static size_t stringPrintLen(const char *s, unsigned precision) {
   size_t len = 0;
@@ -24,6 +29,7 @@ struct Writer {
   // then errno should be set
   size_t (*write)(struct Writer *writer, const char *s, size_t len);
 };
+
 // returns: 0 on success
 static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, va_list args) {
   *out_written = 0;
@@ -46,8 +52,8 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
 
     // TODO: parse flags
     if (fmt[0] == '-' || fmt[0] == '+' || fmt[0] == ' ' || fmt[0] == '#' || fmt[0] == '0') {
-        fprintf(stderr, "error: vformat flag '%c' is not implemented\n", fmt[0]);
-        return -1;
+      fprintf(stderr, "error: vformat flag '%c' is not implemented\n", fmt[0]);
+      return -1;
     }
 
     // TODO: parse width
@@ -79,7 +85,25 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
       }
     }
 
+    static const unsigned char SPEC_LENGTH_NONE = 0;
+    static const unsigned char SPEC_LENGTH_LONG = 1;
+    static const unsigned char SPEC_LENGTH_LONG_LONG = 2;
+    unsigned char spec_length = SPEC_LENGTH_NONE;
+    if (fmt[0] == 'l') {
+      if (fmt[1] == 'l') {
+        spec_length = SPEC_LENGTH_LONG_LONG;
+        fmt += 2;
+      } else {
+        spec_length = SPEC_LENGTH_LONG;
+        fmt++;
+      }
+    }
+
     if (fmt[0] == 's') {
+      if (spec_length != SPEC_LENGTH_NONE) {
+        fprintf(stderr, "error: non-default length not implemented for 's' specifier\n");
+        return -1;
+      }
       const char *s = va_arg(args, const char *);
       // TODO: is this how we should be handling NULL string pointers?
       if (s == NULL) s = "(null)";
@@ -89,17 +113,40 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
       // sanity check
       if ( (precision == PRECISION_NONE) && (s[written] != 0) ) return -1; // error
       fmt++;
+    } else if (fmt[0] == 'c') {
+      if (spec_length != SPEC_LENGTH_NONE) {
+        fprintf(stderr, "error: non-default length not implemented for 'c' specifier\n");
+        return -1;
+      }
+      if (precision != PRECISION_NONE) {
+         fprintf(stderr, "error: precision not implemented for 'c' specifier\n");
+         return -1;
+      }
+      char c = va_arg(args, int);
+      size_t written = writer->write(writer, &c, 1);
+      if (written != 1) return -1;
+      *out_written += 1;
+      fmt++;
     } else if (fmt[0] == 'd') {
       if (precision != PRECISION_NONE) {
          fprintf(stderr, "error: precision not implemented for 'd' specifier\n");
          return -1;
       }
       char buf[100];
-      const int value = va_arg(args, int);
-      size_t len = _formatCInt(buf, value, 10);
-      size_t written = writer->write(writer, buf, len);
+      size_t format_len;
+      if (spec_length == SPEC_LENGTH_NONE) {
+          const int value = va_arg(args, int);
+          format_len = _formatCInt(buf, value, 10);
+      } else if (spec_length == SPEC_LENGTH_LONG) {
+          const long int value = va_arg(args, long int);
+          format_len = _formatCLong(buf, value, 10);
+      } else if (spec_length == SPEC_LENGTH_LONG_LONG) {
+          const long int value = va_arg(args, long long int);
+          format_len = _formatCLonglong(buf, value, 10);
+      } else abort();
+      size_t written = writer->write(writer, buf, format_len);
       *out_written += written;
-      if (written != len) return -1; // error
+      if (written != format_len) return -1; // error
       fmt++;
     } else if (fmt[0] == 'u' || fmt[0] == 'x') {
       uint8_t base = (fmt[0] == 'd') ? 10 : 16;
@@ -108,11 +155,21 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
          return -1;
       }
       char buf[100];
-      const unsigned value = va_arg(args, unsigned);
-      size_t len = _formatCUint(buf, value, base);
-      size_t written = writer->write(writer, buf, len);
+      size_t format_len;
+      if (spec_length == SPEC_LENGTH_NONE) {
+          const unsigned value = va_arg(args, unsigned);
+          format_len = _formatCUint(buf, value, base);
+      } else if (spec_length == SPEC_LENGTH_LONG) {
+          const long unsigned value = va_arg(args, long unsigned);
+          format_len = _formatCUlong(buf, value, base);
+      } else if (spec_length == SPEC_LENGTH_LONG_LONG) {
+          const long unsigned value = va_arg(args, long long unsigned);
+          format_len = _formatCUlonglong(buf, value, base);
+      } else abort();
+
+      size_t written = writer->write(writer, buf, format_len);
       *out_written += written;
-      if (written != len) return -1; // error
+      if (written != format_len) return -1; // error
       fmt++;
     } else if (fmt[0] == 0) {
       return -1; // spurious trailing '%'
