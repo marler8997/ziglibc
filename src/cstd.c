@@ -1,4 +1,5 @@
 // Some of ziglibc is currently in C to have vararg support
+#include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -7,13 +8,13 @@
 
 // TODO: restrict pointers?
 size_t _fwrite_buf(const char *ptr, size_t size, FILE *stream);
-size_t _formatCInt(char *buf, int value);
-size_t _formatCUint(char *buf, int value);
+size_t _formatCInt(char *buf, int value, uint8_t base);
+size_t _formatCUint(char *buf, unsigned value, uint8_t base);
 
 static size_t stringPrintLen(const char *s, unsigned precision) {
-    size_t len = 0;
-    for (; s[len] && len < (size_t)precision; len++) { }
-    return len;
+  size_t len = 0;
+  for (; s[len] && len < (size_t)precision; len++) { }
+  return len;
 }
 
 struct Writer {
@@ -95,19 +96,20 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
       }
       char buf[100];
       const int value = va_arg(args, int);
-      size_t len = _formatCInt(buf, value);
+      size_t len = _formatCInt(buf, value, 10);
       size_t written = writer->write(writer, buf, len);
       *out_written += written;
       if (written != len) return -1; // error
       fmt++;
-    } else if (fmt[0] == 'u') {
+    } else if (fmt[0] == 'u' || fmt[0] == 'x') {
+      uint8_t base = (fmt[0] == 'd') ? 10 : 16;
       if (precision != PRECISION_NONE) {
-         fprintf(stderr, "error: precision not implemented for 'u' specifier\n");
+         fprintf(stderr, "error: precision not implemented for '%c' specifier\n", fmt[0]);
          return -1;
       }
       char buf[100];
       const unsigned value = va_arg(args, unsigned);
-      size_t len = _formatCUint(buf, value);
+      size_t len = _formatCUint(buf, value, base);
       size_t written = writer->write(writer, buf, len);
       *out_written += written;
       if (written != len) return -1; // error
@@ -230,6 +232,8 @@ struct UnboundedBufferWriter {
 static size_t unboundedBufferWrite(struct Writer *base, const char *s, size_t len)
 {
   struct UnboundedBufferWriter *writer = (struct UnboundedBufferWriter*)base;
+  // TODO: probably should use strncpy if len is 0, could be faster
+  if (len == 0) len = strlen(s);
   memcpy(writer->buf, s, len);
   writer->buf += len;
   return len;

@@ -821,11 +821,11 @@ export fn perror(s: [*:0]const u8) callconv(.C) void {
 // NOTE: this is not a libc function, it's exported so it can be used
 //       by vformat in libc.c
 // buf must be at least 100 bytes
-export fn _formatCInt(buf: [*]u8, value: c_int) callconv(.C) usize {
-    return std.fmt.formatIntBuf(buf[0..100], value, 10, .lower, .{});
+export fn _formatCInt(buf: [*]u8, value: c_int, base: u8) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
 }
-export fn _formatCUint(buf: [*]u8, value: c_uint) callconv(.C) usize {
-    return std.fmt.formatIntBuf(buf[0..100], value, 10, .lower, .{});
+export fn _formatCUint(buf: [*]u8, value: c_uint, base: u8) callconv(.C) usize {
+    return std.fmt.formatIntBuf(buf[0..100], value, base, .lower, .{});
 }
 
 // --------------------------------------------------------------------------------

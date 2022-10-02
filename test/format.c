@@ -12,6 +12,8 @@ int main(int argc, char *argv[])
 
   expect(18 == snprintf(buffer, sizeof(buffer), "Hello number %d\n", 1293));
   expect(0 == strcmp(buffer, "Hello number 1293\n"));
+  expect(20 == snprintf(buffer, sizeof(buffer), "Hello number 0x%x\n", 0x1fa2));
+  expect(0 == strcmp(buffer, "Hello number 0x1fa2\n"));
 
   expect(4 == snprintf(buffer, sizeof(buffer), "%s", "abcd"));
   expect(0 == strcmp(buffer, "abcd"));
