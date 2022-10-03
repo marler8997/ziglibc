@@ -154,6 +154,7 @@ pub fn build(b: *std.build.Builder) void {
         }
     }
     addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
+    addTinyRegexCTests(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addLua(b, target, mode, libc_only_std_static, zig_start);
     _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
@@ -237,6 +238,59 @@ fn addLibcTest(
             exe.linkSystemLibrary("kernel32");
         }
         libc_test_step.dependOn(&exe.run().step);
+    }
+}
+
+fn addTinyRegexCTests(
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    libc_only_std_static: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
+    zig_posix: *std.build.LibExeObjStep,
+) void {
+    const repo = GitRepoStep.create(b, .{
+        .url = "https://github.com/marler8997/tiny-regex-c",
+        .sha = "95ef2ad35d36783d789b0ade3178b30a942f085c",
+        .branch = "nocompile",
+    });
+
+    const re_step = b.step("re-tests", "run the tiny-regex-c tests");
+    inline for (&[_][]const u8 { "test1", "test3" }) |test_name| {
+        const exe = b.addExecutable("re" ++ test_name, null);
+        exe.setTarget(target);
+        exe.setBuildMode(mode);
+        //exe.install();
+        exe.step.dependOn(&repo.step);
+        const repo_path = repo.getPath(&exe.step);
+        var files = std.ArrayList([]const u8).init(b.allocator);
+        const sources = [_][]const u8 {
+            "re.c", "tests" ++ std.fs.path.sep_str ++ test_name ++ ".c",
+        };
+        for (sources) |src| {
+            files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        }
+
+        exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+            "-std=c99",
+        });
+        exe.addIncludePath(repo_path);
+
+        exe.addIncludePath("inc/libc");
+        exe.addIncludePath("inc/posix");
+        exe.linkLibrary(libc_only_std_static);
+        exe.linkLibrary(zig_start);
+        exe.linkLibrary(zig_posix);
+        // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
+        //    if (target.getOs().tag == .windows) {
+        //        exe.linkSystemLibrary("ntdll");
+        //        exe.linkSystemLibrary("kernel32");
+        //    }
+
+        //const step = b.step("re", "build the re (tiny-regex-c) tool");
+        //step.dependOn(&exe.install_step.?.step);
+        const run = exe.run();
+        re_step.dependOn(&run.step);
     }
 }
 

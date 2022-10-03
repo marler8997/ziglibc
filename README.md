@@ -44,3 +44,6 @@ The following is a list of C projects that I could use to test ziglibc with:
 * BASH
 * SDL
 * GTK
+* raylib
+* my morec project, tools directory
+* c4
