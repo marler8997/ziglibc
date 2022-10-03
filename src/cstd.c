@@ -201,17 +201,22 @@ static size_t streamWrite(struct Writer *base, const char *s, size_t len)
 }
 
 // TODO: restrict pointers?
-int vfprintf(FILE *stream, const char *format, va_list args)
+int vfprintf(FILE *stream, const char *format, va_list arg)
 {
   struct StreamWriter writer;
   writer.base.write = streamWrite;
   writer.stream = stream;
   size_t written;
-  if (0 == vformat(&written, &writer.base, format, args)) {
+  if (0 == vformat(&written, &writer.base, format, arg)) {
     return (int)written;
   }
   stream->errno = errno;
   return -1;
+}
+
+int vprintf(const char *format, va_list arg)
+{
+  return vfprintf(stdout, format, arg);
 }
 
 // TODO: restrict pointers?

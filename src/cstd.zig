@@ -171,6 +171,12 @@ export fn abs(j: c_int) callconv(.C) c_int {
     return if (j >= 0) j else -j;
 }
 
+export fn atoi(nptr: [*:0]const u8) callconv(.C) c_int {
+    // TODO: atoi hase some behavior difference on error, get a test for
+    //       these differences
+    return strto(c_int, nptr, null, 10);
+}
+
 // --------------------------------------------------------------------------------
 // string
 // --------------------------------------------------------------------------------

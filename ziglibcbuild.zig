@@ -7,6 +7,7 @@ pub const LibVariant = enum {
     only_std,
     only_posix,
     only_linux,
+    only_gnu,
     full,
 };
 pub const Start = enum {
@@ -35,6 +36,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
         .only_std => "c-only-std",
         .only_posix => "c-only-posix",
         .only_linux => "c-only-linux",
+        .only_gnu => "c-only-gnu",
         //.full => "c",
         .full => "cguana", // use cguana to avoid passing in '-lc' to zig which will
                            // cause it to add the system libc headers
@@ -80,6 +82,14 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     if (include_cstd or include_posix) {
         lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
+    }
+    const include_gnu = switch (opt.variant) {
+        .only_gnu, .full => true,
+        else => false,
+    };
+    modules_options.addOption(bool, "gnu", include_gnu);
+    if (include_gnu) {
+        lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "gnu");
     }
     return lib;
 }

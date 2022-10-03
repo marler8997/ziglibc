@@ -53,7 +53,7 @@ int scanf(const char *format, ...);
 int sprintf(char *s, const char *format, ...);
 int sscanf(const char *s, const char *format, ...);
 //int vfprintf(FILE *stream, const char *format, va_list arg);
-//int vprintf(const char *format, va_list arg);
+int vprintf(const char *format, va_list arg);
 int vsprintf(char *s, const char *format, va_list arg);
 int fgetc(FILE *stream);
 char *fgets(char *s, int n, FILE *stream);

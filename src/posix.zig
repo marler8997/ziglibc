@@ -10,6 +10,7 @@ const c = @cImport({
     @cInclude("time.h");
     @cInclude("signal.h");
     @cInclude("sys/time.h");
+    @cInclude("sys/stat.h");
 });
 
 const cstd = struct {
@@ -277,4 +278,12 @@ export fn sigaction(sig: c_int, act: *const c.struct_sigaction, oact: *c.struct_
     _ = act;
     _ = oact;
     @panic("sigaction not implemented");
+}
+
+// --------------------------------------------------------------------------------
+// sys/stat.h
+// --------------------------------------------------------------------------------
+export fn chmod(path: [*:0]const u8, mode: c.mode_t) callconv(.C) c_int {
+    trace.log("chmod '{s}' mode=0x{x}", .{path, mode});
+    @panic("chmod not implemented");
 }
