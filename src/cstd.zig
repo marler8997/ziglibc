@@ -35,7 +35,7 @@ const windows = struct {
     fn writeAll(hFile: HANDLE, buffer: []const u8, out_written: *usize) error{WriteFailed}!void {
         var written: usize = 0;
         while (written < buffer.len) {
-            const next_write = std.math.cast(u32, buffer.len - written) catch std.math.maxInt(u32);
+            const next_write = std.math.cast(u32, buffer.len - written) orelse std.math.maxInt(u32);
             var last_written: u32 = undefined;
             const result = std.os.windows.kernel32.WriteFile(hFile, buffer.ptr + written, next_write, &last_written, null);
             written += last_written; // WriteFile always sets last_written to 0 before doing anything

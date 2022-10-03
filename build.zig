@@ -292,10 +292,10 @@ fn addTinyRegexCTests(
         exe.linkLibrary(zig_start);
         exe.linkLibrary(zig_posix);
         // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
-        //    if (target.getOs().tag == .windows) {
-        //        exe.linkSystemLibrary("ntdll");
-        //        exe.linkSystemLibrary("kernel32");
-        //    }
+        if (target.getOs().tag == .windows) {
+            exe.linkSystemLibrary("ntdll");
+            exe.linkSystemLibrary("kernel32");
+        }
 
         //const step = b.step("re", "build the re (tiny-regex-c) tool");
         //step.dependOn(&exe.install_step.?.step);
@@ -474,10 +474,10 @@ fn addYacc(
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
-//    if (target.getOs().tag == .windows) {
-//        exe.linkSystemLibrary("ntdll");
-//        exe.linkSystemLibrary("kernel32");
-//    }
+    if (target.getOs().tag == .windows) {
+        exe.linkSystemLibrary("ntdll");
+        exe.linkSystemLibrary("kernel32");
+    }
 
     const step = b.step("yacc", "build the yacc tool");
     step.dependOn(&exe.install_step.?.step);
@@ -526,10 +526,10 @@ fn addYabfc(
     exe.linkLibrary(zig_posix);
     exe.linkLibrary(zig_gnu);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
-//    if (target.getOs().tag == .windows) {
-//        exe.linkSystemLibrary("ntdll");
-//        exe.linkSystemLibrary("kernel32");
-//    }
+    if (target.getOs().tag == .windows) {
+        exe.linkSystemLibrary("ntdll");
+        exe.linkSystemLibrary("kernel32");
+    }
 
     const step = b.step("yabfc", "build the yabfc tool (Yet Another BrainFuck Compiler)");
     step.dependOn(&exe.install_step.?.step);

@@ -110,6 +110,9 @@ export fn mkstemp(template: [*:0]u8) callconv(.C) c_int {
 
 export fn mkostemp(template: [*:0]u8, suffixlen: c_int, flags: c_int) callconv(.C) c_int {
     trace.log("mkstemp '{}'", .{trace.fmtStr(template)});
+    if (builtin.os.tag == .windows) {
+        @panic("mkostemp not implemented in Windows");
+    }
 
     const rand_part: *[6]u8 = blk: {
         const len = c.strlen(template);
@@ -208,7 +211,7 @@ export fn unlink(path: [*:0]const u8) callconv(.C) c_int {
 
 export fn _exit(status: c_int) callconv(.C) noreturn {
     if (builtin.os.tag == .windows) {
-        os.windows.kernel32.ExitProcess(status);
+        os.windows.kernel32.ExitProcess(@bitCast(c_uint, status));
     }
     if (builtin.os.tag == .wasi) {
         os.wasi.proc_exit(status);
