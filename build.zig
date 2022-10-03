@@ -168,6 +168,9 @@ pub fn build(b: *std.build.Builder) void {
     _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYabfc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
+
+    _ = @import("busybox/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
+    _ = @import("ncurses/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
