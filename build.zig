@@ -134,6 +134,14 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
+        const exe = addTest("scanf", b, target, mode, libc_only_std_static, zig_start);
+        const run_step = exe.run();
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
+    {
         const exe = addTest("strto", b, target, mode, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
