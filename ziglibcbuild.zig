@@ -64,7 +64,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "cstd", include_cstd);
     if (include_cstd) {
-        lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "cstd.c", &c_flags);
+        lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "printf.c", &c_flags);
         lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "scanf.c", &c_flags);
     }
     const include_posix = switch (opt.variant) {
