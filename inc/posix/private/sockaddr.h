@@ -1,9 +1,11 @@
 #ifndef _PRIVATE_SOCKADDR_H
 #define _PRIVATE_SOCKADDR_H
 
+#include "sa_family_t.h"
+
 // TODO: define me better
 struct sockaddr {
-  int sa_family;
+  sa_family_t sa_family;
   char reserved[100];
 };
 

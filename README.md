@@ -51,5 +51,4 @@ The following is a list of C projects that I could use to test ziglibc with:
 * m4 preprocessor
 * ncurses
 * games in ncurses?
-* sdl
 * https://github.com/superjer/tinyc.games

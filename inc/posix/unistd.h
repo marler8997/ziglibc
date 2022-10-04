@@ -23,4 +23,6 @@ unsigned sleep(unsigned seconds);
 int unlink(const char *path);
 void _exit(int status);
 
+int gethostname(char *name, size_t namelen);
+
 #endif /* _UNISTD_H */

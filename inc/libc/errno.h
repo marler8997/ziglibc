@@ -3,8 +3,9 @@
 
 extern int errno;
 
-// NOTE: these are defined by posix
+/* NOTE: these are defined by posix */
 #if 1
+    /* TODO: these can change based on platform, for now I'm just worrying about x86 */
     #define ENOENT 2
     #define EINTR 4
     #define EAGAIN 11
@@ -14,6 +15,7 @@ extern int errno;
     #define EINVAL 22
     #define ERANGE 34
     #define EWOULDBLOCK 140
+    #define ECONNREFUSED 111
 #endif
 
 #endif /* _ERRNO_H */

@@ -91,6 +91,7 @@ void perror(const char *s);
     #define STDERR_FILENO 2
     FILE *popen(const char *command, const char *mode);
     FILE *fdopen(int filedes, const char *mode);
+    int fileno(FILE *stream);
 #endif
 
 // NOTE: this stuff is defined by linux, not libc, but they need

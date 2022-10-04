@@ -840,6 +840,12 @@ export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
     return 0; // no-op since there's no buffering right now
 }
 
+export fn putchar(ch: c_int) callconv(.C) c_int {
+    trace.log("putchar {}", .{ch});
+    const buf = [_]u8 { @intCast(u8, ch & 0xff) };
+    return if (1 == _fwrite_buf(&buf, 1, stdout)) buf[0] else c.EOF;
+}
+
 export fn puts(s: [*:0]const u8) callconv(.C) c_int {
     trace.log("puts {}", .{trace.fmtStr(s)});
     return fputs(s, stdout);

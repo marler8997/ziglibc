@@ -31,5 +31,6 @@ struct stat {
 
 int stat(const char *restrict path, struct stat *restrict buf);
 int chmod(const char *path, mode_t mode);
+int fstat(int fildes, struct stat *buf);
 
 #endif /* _SYS_STAT_H */

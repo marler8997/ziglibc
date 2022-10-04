@@ -87,6 +87,8 @@ int main(int argc, char *argv[])
     fail("unhandled DBL_MANT_DIG %u", (unsigned)DBL_MANT_DIG);
   }
 
+  check_equal("UINT64_C(0xffff...)", "%llu", 0xffffffffffffffffllu, UINT64_C(0xffffffffffffffff));
+
   if (result == 0) {
     printf("Success!\n");
   }
