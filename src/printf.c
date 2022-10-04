@@ -75,7 +75,7 @@ static int vformat(size_t *out_written, struct Writer *writer, const char *fmt, 
         precision = va_arg(args, int);
         fmt++;
       } else if (fmt[0] >= '0' && fmt[0] <= '9') {
-        fprintf(stderr, "error: vformat precision number not implemented\n");
+        fprintf(stderr, "error: vformat precision number '%c' not implemented\n", fmt[0]);
         return -1;
       } else {
         // TODO: don't actually print an error message like this

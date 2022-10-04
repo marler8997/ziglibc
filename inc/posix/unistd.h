@@ -10,6 +10,7 @@
 int access(const char *path, int amode);
 int close(int filedes);
 
+ssize_t read(int filedes, void *buf, size_t nbyte);
 ssize_t write(int fildes, const void *buf, size_t nbyte);
 
 #define _PC_LINK_MAX 0
@@ -24,5 +25,6 @@ int unlink(const char *path);
 void _exit(int status);
 
 int gethostname(char *name, size_t namelen);
+int isatty(int filedes);
 
 #endif /* _UNISTD_H */

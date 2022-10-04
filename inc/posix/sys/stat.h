@@ -13,6 +13,12 @@
 #include "../private/blksize_t.h"
 #include "../private/blkcnt_t.h"
 
+#define S_IXUSR 0100
+#define S_IWUSR 0200
+#define S_IRUSR 0400
+#define S_IRWXG 0070
+#define S_IRWXO 0007
+
 struct stat {
   dev_t st_dev;
   ino_t st_ino;
@@ -32,5 +38,6 @@ struct stat {
 int stat(const char *restrict path, struct stat *restrict buf);
 int chmod(const char *path, mode_t mode);
 int fstat(int fildes, struct stat *buf);
+mode_t umask(mode_t);
 
 #endif /* _SYS_STAT_H */

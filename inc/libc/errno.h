@@ -13,6 +13,7 @@ extern int errno;
     #define EACCES 13
     #define EEXIST 17
     #define EINVAL 22
+    #define ENOTTY 25
     #define ERANGE 34
     #define EWOULDBLOCK 140
     #define ECONNREFUSED 111
