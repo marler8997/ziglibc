@@ -67,7 +67,41 @@ export var errno: c_int = 0;
 // --------------------------------------------------------------------------------
 export fn exit(status: c_int) callconv(.C) noreturn {
     trace.log("exit {}", .{status});
+
+    {
+        global.atexit_mutex.lock();
+        defer global.atexit_mutex.unlock();
+        global.atexit_started = true;
+    }
+    {
+        var i = global.atexit_funcs.items.len;
+        while (i != 0) : (i -= 1) {
+            global.atexit_funcs.items[i-1]();
+        }
+    }
     std.os.exit(@intCast(u8, status));
+}
+
+const ExitFunc = switch (builtin.zig_backend) {
+    .stage1 => fn() callconv(.C) void,
+    else => *const fn() callconv(.C) void,
+};
+
+export fn atexit(func: ExitFunc) c_int {
+    global.atexit_mutex.lock();
+    defer global.atexit_mutex.unlock();
+
+    if (global.atexit_started) {
+        c.errno = c.EPERM;
+        return -1;
+    }
+    global.atexit_funcs.append(global.gpa.allocator(), func) catch |e| switch (e) {
+        error.OutOfMemory => {
+            c.errno = c.ENOMEM;
+            return -1;
+        },
+    };
+    return 0;
 }
 
 export fn abort() callconv(.C) noreturn {
@@ -559,6 +593,12 @@ const global = struct {
 
     // TODO: remove this.  Just using it to return error numbers as strings for now
     var tmp_strerror_buffer: [30]u8 = undefined;
+
+    var atexit_mutex = std.Thread.Mutex{};
+    var atexit_started = false;
+    // TODO: these don't need to be contiguous, use a chain of fixed size chunks
+    //       that don't need to move/be resized ChunkedArrayList or something
+    var atexit_funcs: std.ArrayListUnmanaged(ExitFunc) = .{};
 };
 export const stdin: *c.FILE = &global.files[0];
 export const stdout: *c.FILE = &global.files[1];
@@ -577,6 +617,10 @@ export fn remove(filename: [*:0]const u8) callconv(.C) c_int {
 export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
     trace.log("remove {} {}", .{trace.fmtStr(old), trace.fmtStr(new)});
     @panic("rename not implemented");
+}
+
+export fn getchar() callconv(.C) c_int {
+    return getc(stdin);
 }
 
 export fn getc(stream: *c.FILE) callconv(.C) c_int {

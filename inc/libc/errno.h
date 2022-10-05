@@ -6,6 +6,7 @@ extern int errno;
 /* NOTE: these are defined by posix */
 #if 1
     /* TODO: these can change based on platform, for now I'm just worrying about x86 */
+    #define EPERM 1
     #define ENOENT 2
     #define EINTR 4
     #define EAGAIN 11

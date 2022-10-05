@@ -9,6 +9,7 @@ const c = @cImport({
     @cInclude("stdio.h");
     @cInclude("time.h");
     @cInclude("signal.h");
+    @cInclude("termios.h");
     @cInclude("sys/time.h");
     @cInclude("sys/stat.h");
 });
@@ -86,6 +87,11 @@ export fn write(fd: c_int, buf: [*]const u8, nbyte: usize) callconv(.C) isize {
             return -1;
         }
     }
+}
+
+export fn read(fd: c_int, buf: [*]u8, len: usize) callconv(.C) isize {
+    trace.log("read fd={} buf={*} len={}", .{fd, buf, len});
+    @panic("read not implemented");
 }
 
 // --------------------------------------------------------------------------------
@@ -221,6 +227,21 @@ export fn _exit(status: c_int) callconv(.C) noreturn {
         os.linux.exit_group(status);
     }
     os.system.exit(status);
+}
+
+export fn isatty(fd: c_int) callconv(.C) c_int {
+    if (builtin.os.tag == .windows)
+        @panic("isatty not supported on windows (yet?)");
+
+    var size: c.winsize = undefined;
+    switch (os.errno(os.system.ioctl(fd, c.TIOCGWINSZ, @ptrToInt(&size)))) {
+        .SUCCESS => return 1,
+        .BADF => {
+            c.errno = c.ENOTTY;
+            return 0;
+        },
+        else => return 0,
+    }
 }
 
 // --------------------------------------------------------------------------------
