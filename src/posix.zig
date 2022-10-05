@@ -321,3 +321,47 @@ export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
     }
     return @intCast(c.mode_t, old_mode);
 }
+
+// --------------------------------------------------------------------------------
+// termios
+// --------------------------------------------------------------------------------
+export fn tcgetattr(fd: c_int, ios: *os.linux.termios) callconv(.C) c_int {
+    switch (os.errno(os.linux.tcgetattr(fd, ios))) {
+        .SUCCESS => return 0,
+        else => |errno| {
+            c.errno = @enumToInt(errno);
+            return -1;
+        },
+    }
+}
+
+export fn tcsetattr(
+    fd: c_int,
+    optional_actions: c_int,
+    ios: *const os.linux.termios,
+) callconv(.C) c_int {
+    switch (os.errno(os.linux.tcsetattr(fd, @intToEnum(os.linux.TCSA, optional_actions), ios))) {
+        .SUCCESS => return 0,
+        else => |errno| {
+            c.errno = @enumToInt(errno);
+            return -1;
+        },
+    }
+}
+
+// --------------------------------------------------------------------------------
+// strings
+// --------------------------------------------------------------------------------
+export fn strcasecmp(a: [*:0]const u8, b:[*:0]const u8) callconv(.C) c_int {
+    trace.log("strcasecmp {} {}", .{trace.fmtStr(a), trace.fmtStr(b)});
+    @panic("not impl");
+//    var a_next = a;
+//    var b_next = b;
+//    while (a_next[0] == b_next[0] and a_next[0] != 0) {
+//        a_next += 1;
+//        b_next += 1;
+//    }
+//    const result = @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
+//    trace.log("strcmp return {}", .{result});
+//    return result;
+}
