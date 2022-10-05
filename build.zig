@@ -567,7 +567,8 @@ fn addSecretGame(
     const exe = b.addExecutable("secret", null);
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    exe.install();
+    //exe.install();
+    _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
