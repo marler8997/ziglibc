@@ -1,6 +1,7 @@
 #ifndef _SYS_STAT_H
 #define _SYS_STAT_H
 
+#include "../../libc/private/restrict.h"
 #include "../../libc/private/time_t.h"
 
 #include "../private/dev_t.h"
@@ -35,7 +36,7 @@ struct stat {
   blkcnt_t st_blocks;
 };
 
-int stat(const char *restrict path, struct stat *restrict buf);
+int stat(const char *__zrestrict path, struct stat *__zrestrict buf);
 int chmod(const char *path, mode_t mode);
 int fstat(int fildes, struct stat *buf);
 mode_t umask(mode_t);

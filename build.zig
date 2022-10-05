@@ -176,6 +176,7 @@ pub fn build(b: *std.build.Builder) void {
     _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYabfc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
+    _ = addSecretGame(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
 
     _ = @import("busybox/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
     _ = @import("ncurses/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
@@ -543,6 +544,58 @@ fn addYabfc(
     }
 
     const step = b.step("yabfc", "build the yabfc tool (Yet Another BrainFuck Compiler)");
+    step.dependOn(&exe.install_step.?.step);
+
+    return exe;
+}
+
+fn addSecretGame(
+    b: *std.build.Builder,
+    target: anytype,
+    mode: anytype,
+    libc_only_std_static: *std.build.LibExeObjStep,
+    zig_start: *std.build.LibExeObjStep,
+    zig_posix: *std.build.LibExeObjStep,
+    zig_gnu: *std.build.LibExeObjStep,
+) *std.build.LibExeObjStep {
+    const repo = GitRepoStep.create(b, .{
+        .url = "https://github.com/ethinethin/Secret",
+        .sha = "8ec8442f84f8bed2cb3985455e7af4d1ce605401",
+        .branch = null,
+    });
+
+    const exe = b.addExecutable("secret", null);
+    exe.setTarget(target);
+    exe.setBuildMode(mode);
+    exe.install();
+    exe.step.dependOn(&repo.step);
+    const repo_path = repo.getPath(&exe.step);
+    var files = std.ArrayList([]const u8).init(b.allocator);
+    const sources = [_][]const u8 {
+        "main.c", "inter.c", "input.c", "items.c", "rooms.c", "linenoise/linenoise.c",
+    };
+    for (sources) |src| {
+        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+    }
+    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+        "-std=c90",
+    });
+
+    exe.addIncludePath("inc/libc");
+    exe.addIncludePath("inc/posix");
+    exe.addIncludePath("inc/linux");
+    exe.addIncludePath("inc/gnu");
+    exe.linkLibrary(libc_only_std_static);
+    exe.linkLibrary(zig_start);
+    exe.linkLibrary(zig_posix);
+    exe.linkLibrary(zig_gnu);
+    // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
+    if (target.getOs().tag == .windows) {
+        exe.linkSystemLibrary("ntdll");
+        exe.linkSystemLibrary("kernel32");
+    }
+
+    const step = b.step("secret", "build the secret game");
     step.dependOn(&exe.install_step.?.step);
 
     return exe;
