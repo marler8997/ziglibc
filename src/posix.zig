@@ -311,3 +311,13 @@ export fn chmod(path: [*:0]const u8, mode: c.mode_t) callconv(.C) c_int {
     trace.log("chmod '{s}' mode=0x{x}", .{path, mode});
     @panic("chmod not implemented");
 }
+
+export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
+    trace.log("umask 0x{x}", .{mode});
+    const old_mode = os.linux.syscall1(.umask, @intCast(usize, mode));
+    switch (os.errno(old_mode)) {
+        .SUCCESS => {},
+        else => |e| std.debug.panic("umask syscall should never fail but got '{s}'", .{@tagName(e)}),
+    }
+    return @intCast(c.mode_t, old_mode);
+}
