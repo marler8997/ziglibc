@@ -2,9 +2,15 @@
 //       that require varargs
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
+
+int _ioctlArgPtr(int fd, unsigned long request, void *arg);
 
 int ioctl(int fd, unsigned long request, ...)
 {
-  fprintf(stderr, "ioctl fd=%d request=%d not implemented\n", fd, request);
-  abort();
+    va_list args;
+    va_start(args, request);
+    void *arg_ptr = va_arg(args, void*);
+    va_end(args);
+    return _ioctlArgPtr(fd, request, arg_ptr);
 }

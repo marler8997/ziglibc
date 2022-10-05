@@ -91,7 +91,14 @@ export fn write(fd: c_int, buf: [*]const u8, nbyte: usize) callconv(.C) isize {
 
 export fn read(fd: c_int, buf: [*]u8, len: usize) callconv(.C) isize {
     trace.log("read fd={} buf={*} len={}", .{fd, buf, len});
-    @panic("read not implemented");
+    const rc = os.linux.read(fd, buf, len);
+    switch (os.errno(rc)) {
+        .SUCCESS => return @intCast(isize, rc),
+        else => |e| {
+            c.errno = @enumToInt(e);
+            return -1;
+        },
+    }
 }
 
 // --------------------------------------------------------------------------------
@@ -364,4 +371,19 @@ export fn strcasecmp(a: [*:0]const u8, b:[*:0]const u8) callconv(.C) c_int {
 //    const result = @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
 //    trace.log("strcmp return {}", .{result});
 //    return result;
+}
+
+// --------------------------------------------------------------------------------
+// sys/ioctl
+// --------------------------------------------------------------------------------
+export fn _ioctlArgPtr(fd: c_int, request: c_ulong, arg_ptr: *anyopaque) c_int {
+    trace.log("ioctl fd={} request=0x{x} arg={*}", .{fd, request, arg_ptr});
+    const rc = os.linux.ioctl(fd, @intCast(u32, request), @ptrToInt(arg_ptr));
+    switch (os.errno(rc)) {
+        .SUCCESS => return @intCast(c_int, rc),
+        else => |errno| {
+            c.errno = @enumToInt(errno);
+            return -1;
+        },
+    }
 }
