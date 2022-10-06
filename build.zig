@@ -4,6 +4,8 @@ const libcbuild = @import("ziglibcbuild.zig");
 const luabuild = @import("luabuild.zig");
 
 pub fn build(b: *std.build.Builder) void {
+    const trace_enabled = b.option(bool, "trace", "enable libc tracing") orelse false;
+
     {
         const exe = b.addExecutable("genheaders", "src" ++ std.fs.path.sep_str ++ "genheaders.zig");
         const run = exe.run();
@@ -24,6 +26,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .full,
         .link = .static,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_full_static.setTarget(target);
     libc_full_static.setBuildMode(mode);
@@ -32,6 +35,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .full,
         .link = .shared,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_full_shared.setTarget(target);
     libc_full_shared.setBuildMode(mode);
@@ -44,6 +48,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .only_std,
         .link = .static,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_only_std_static.setTarget(target);
     libc_only_std_static.setBuildMode(mode);
@@ -52,6 +57,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .only_std,
         .link = .shared,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_only_std_shared.setTarget(target);
     libc_only_std_shared.setBuildMode(mode);
@@ -61,6 +67,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .only_posix,
         .link = .static,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_only_posix.setTarget(target);
     libc_only_posix.setBuildMode(mode);
@@ -70,6 +77,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .only_linux,
         .link = .static,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_only_linux.setTarget(target);
     libc_only_linux.setBuildMode(mode);
@@ -79,6 +87,7 @@ pub fn build(b: *std.build.Builder) void {
         .variant = .only_gnu,
         .link = .static,
         .start = .ziglibc,
+        .trace = trace_enabled,
     });
     libc_only_gnu.setTarget(target);
     libc_only_gnu.setBuildMode(mode);

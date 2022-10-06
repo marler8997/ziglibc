@@ -18,6 +18,7 @@ pub const ZigLibcOptions = struct {
     variant: LibVariant,
     link: LinkKind,
     start: Start,
+    trace: bool,
 };
 
 /// Provides a _start symbol that will call C main
@@ -41,6 +42,9 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
         .full => "cguana", // use cguana to avoid passing in '-lc' to zig which will
                            // cause it to add the system libc headers
     };
+    const trace_options = builder.addOptions();
+    trace_options.addOption(bool, "enabled", opt.trace);
+
     const modules_options = builder.addOptions();
     modules_options.addOption(bool, "glibcstart", switch (opt.start) { .glibc => true, else => false });
     const index = "src" ++ std.fs.path.sep_str ++ "lib.zig";
@@ -55,6 +59,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     //       anything except performance to enable it
     lib.force_pic = true;
     lib.addOptions("modules", modules_options);
+    lib.addOptions("trace_options", trace_options);
     const c_flags = [_][]const u8 {
         "-std=c11",
     };
