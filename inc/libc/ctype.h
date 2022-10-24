@@ -15,4 +15,16 @@ int isxdigit(int c);
 int tolower(int c);
 int toupper(int c);
 
+#if __STDC_VERSION__ >= 199901L
+    int isblank(int c);
+#endif
+
+// NOTE: this stuff is defined by POSIX, not libc, but they need
+//       to live in this header
+#if 1
+    int isascii(int c);
+    int toascii(int c);
+#endif
+
+
 #endif /* _CTYPE_H */

@@ -53,6 +53,30 @@ int main(int argc, char *argv[])
   check_sizeof(int64_t, 8);
   check_sizeof(uint64_t, 8);
 
+#define check_size_atleast(T,b)                                 \
+  if (sizeof(T) < b) {                                           \
+    result = -1;                                               \
+    fprintf(stderr, #T " %u < %u\n", (unsigned)sizeof(T), b); \
+  }
+
+  check_size_atleast(int_least8_t, 1);
+  check_size_atleast(int_least16_t, 2);
+  check_size_atleast(int_least32_t, 4);
+  check_size_atleast(int_least64_t, 8);
+  check_size_atleast(uint_least8_t, 1);
+  check_size_atleast(uint_least16_t, 2);
+  check_size_atleast(uint_least32_t, 4);
+  check_size_atleast(uint_least64_t, 8);
+
+  check_size_atleast(int_fast8_t, 1);
+  check_size_atleast(int_fast16_t, 2);
+  check_size_atleast(int_fast32_t, 4);
+  check_size_atleast(int_fast64_t, 8);
+  check_size_atleast(uint_fast8_t, 1);
+  check_size_atleast(uint_fast16_t, 2);
+  check_size_atleast(uint_fast32_t, 4);
+  check_size_atleast(uint_fast64_t, 8);
+
   if (INT_MAX == 2147483647) {
     check_equal("UINT_MAX", "%u", 0xffffffff, UINT_MAX);
     check_sizeof(int, 4);
