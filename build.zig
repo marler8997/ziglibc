@@ -365,6 +365,12 @@ fn addLua(
     lua_exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     lua_exe.linkLibrary(libc_only_std_static);
     lua_exe.linkLibrary(zig_start);
+    // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
+    if (target.getOs().tag == .windows) {
+        lua_exe.addIncludePath("inc/win32");
+        lua_exe.linkSystemLibrary("ntdll");
+        lua_exe.linkSystemLibrary("kernel32");
+    }
 
     const step = b.step("lua", "build the LUA interpreter");
     step.dependOn(&lua_exe.install_step.?.step);

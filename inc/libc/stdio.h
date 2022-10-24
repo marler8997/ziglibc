@@ -100,5 +100,8 @@ void perror(const char *s);
     #define FOPEN_MAX 999
 #endif
 
+#ifdef _WIN32
+    FILE *_popen(const char *command, const char *mode);
+#endif
 
 #endif /* _STDIO_H */
