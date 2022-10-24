@@ -32,8 +32,8 @@ struct termios {
 
 /* Local Modes */
 #define ISIG   0x0001
-#define ECHO   0x0080
 #define ICANON 0x0002
+#define ECHO   0x0008
 #define IEXTEN 0x8000
 
 /* Attribute Selection */
