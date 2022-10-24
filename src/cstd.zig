@@ -681,7 +681,7 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
         .macos, .ios, .watchos, .tvos => std.math.maxInt(i32),
         else => std.math.maxInt(isize),
     };
-    const adjusted_len = @min(max_count, size);
+    const adjusted_len = std.math.min(max_count, size);
 
     const rc = std.os.system.read(stream.fd, ptr, adjusted_len);
     switch (std.os.errno(rc)) {
