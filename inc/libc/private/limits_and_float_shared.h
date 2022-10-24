@@ -45,16 +45,14 @@
 /* assuming 32-bit unsigned for now */
 #define UINT_MAX 0xffffffffU
 
-/* minimum value for an object of type long int */
-/* assuming 64-bit long for now */
-#define LONG_MIN -9223372036854775808L
-
-/* maximum value for an object of type long int */
-/* assuming 64-bit long for now */
-#define LONG_MAX 9223372036854775807L
-
-/* maximum value for an object of type unsigned long int */
-/* assuming 64-bit unsigned long for now */
-#define ULONG_MAX 0xffffffffffffffffUL
+#ifdef _WIN32
+    #define LONG_MIN (-2147483648L)
+    #define LONG_MAX (0x7fffffffL)
+    #define ULONG_MAX 0xffffffffUL
+#else
+    #define LONG_MIN (-9223372036854775808L)
+    #define LONG_MAX (0x7fffffffffffffffL)
+    #define ULONG_MAX 0xffffffffffffffffUL
+#endif
 
 #endif /* _LIMITS_AND_FLOAT_SHARED_H */
