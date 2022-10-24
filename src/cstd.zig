@@ -156,23 +156,36 @@ fn getGpaBuf(ptr: [*]u8) []align(alloc_align) u8 {
 
 export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
     trace.log("realloc {*} {}", .{ptr, size});
-    const buf = getGpaBuf(ptr orelse {
+    const gpa_buf = getGpaBuf(ptr orelse {
         const result = malloc(size);
         trace.log("realloc return {*} (from malloc)", .{result});
         return result;
     });
     if (size == 0) {
-        global.gpa.allocator().free(buf);
-        trace.log("realloc return null", .{});
+        global.gpa.allocator().free(gpa_buf);
         return null;
     }
-    if (size <= buf.len) {
-        const result = global.gpa.allocator().rawResize(buf, alloc_align, size, 1, @returnAddress());
-        std.debug.assert(result == size);
+
+    const gpa_size = alloc_metadata_len + size;
+    if (gpa_size <= gpa_buf.len) {
+        const result = global.gpa.allocator().rawResize(gpa_buf, alloc_align, gpa_size, 1, @returnAddress());
+        std.debug.assert(result == gpa_size);
         trace.log("realloc return {*}", .{ptr});
         return ptr;
     }
-    @panic("realloc not implemented");
+
+    const new_buf = global.gpa.allocator().reallocAdvanced(
+        gpa_buf, alloc_align, gpa_size, .exact
+    ) catch |e| switch (e) {
+        error.OutOfMemory => {
+            trace.log("realloc out-of-mem from {} to {}", .{gpa_buf.len, gpa_size});
+            return null;
+        },
+    };
+    @ptrCast(*usize, new_buf.ptr).* = gpa_size;
+    const result = @intToPtr([*]align(alloc_align) u8, @ptrToInt(new_buf.ptr) + alloc_metadata_len);
+    trace.log("realloc return {*}", .{result});
+    return result;
 }
 
 export fn calloc(nmemb: usize, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
