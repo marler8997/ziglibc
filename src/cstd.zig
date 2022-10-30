@@ -119,9 +119,15 @@ export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
     //var e: ?[*:0]u8 = environ;
 }
 
-export fn system(string: [*:0]const u8) callconv(.C) c_int {
+export fn system(string: ?[*:0]const u8) callconv(.C) c_int {
     trace.log("system {}", .{trace.fmtStr(string)});
-    @panic("system function not implemented");
+    if (string) |_| {
+        @panic("system function not implemented");
+    } else {
+        trace.log("system returning -1 to indicate it is not supported yet", .{});
+        // TODO: do we need to set errno?
+        return -1; // system not implemented yet
+    }
 }
 
 /// alloc_align is the maximum alignment needed for all types
@@ -169,7 +175,7 @@ export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]
 
     const gpa_size = alloc_metadata_len + size;
     if (gpa_size <= gpa_buf.len) {
-        const result = global.gpa.allocator().rawResize(gpa_buf, alloc_align, gpa_size, 1, @returnAddress());
+        const result = global.gpa.allocator().rawResize(gpa_buf, alloc_align, gpa_size, 0, @returnAddress());
         std.debug.assert(result == gpa_size);
         trace.log("realloc return {*}", .{ptr});
         return ptr;
@@ -1087,21 +1093,20 @@ export fn tan(x: f64) callconv(.C) f64 {
 }
 
 export fn frexp(value: f32, exp: *c_int) callconv(.C) f64 {
-    _ = value;
-    _ = exp;
-    @panic("frexp not implemented");
+    // TODO: look into error handling to match C spec
+    const result = std.math.frexp(value);
+    exp.* = result.exponent;
+    return result.significand;
 }
 
 export fn ldexp(x: f64, exp: c_int) callconv(.C) f64 {
-    _ = x;
-    _ = exp;
-    @panic("ldexp not implemented");
+    // TODO: look into error handling to match C spec
+    return std.math.ldexp(x, @intCast(i32, exp));
 }
 
 export fn pow(x: f64, y: f64) callconv(.C) f64 {
-    _ = x;
-    _ = y;
-    @panic("pow not implemented");
+    // TODO: look into error handling to match C spec
+    return std.math.pow(f64, x, y);
 }
 
 // --------------------------------------------------------------------------------
