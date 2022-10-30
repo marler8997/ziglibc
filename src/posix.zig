@@ -183,9 +183,18 @@ fn randomizeTempFilename(slice: *[6]u8) void {
 // --------------------------------------------------------------------------------
 // stdio
 // --------------------------------------------------------------------------------
+export fn fileno(stream: *c.FILE) callconv(.C) c_int {
+    _ = stream;
+    @panic("fileno not implemented");
+}
+
 export fn popen(command: [*:0]const u8, mode: [*:0]const u8) callconv(.C) *c.FILE {
     trace.log("popen '{}' mode='{s}'", .{trace.fmtStr(command), mode});
     @panic("popen not implemented");
+}
+export fn pclose(stream: *c.FILE) callconv(.C) c_int {
+    _ = stream;
+    @panic("pclose not implemented");
 }
 
 export fn fdopen(fd: c_int, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
@@ -385,5 +394,17 @@ export fn _ioctlArgPtr(fd: c_int, request: c_ulong, arg_ptr: *anyopaque) c_int {
             c.errno = @enumToInt(errno);
             return -1;
         },
+    }
+}
+
+// --------------------------------------------------------------------------------
+// Windows
+// --------------------------------------------------------------------------------
+comptime {
+    if (builtin.os.tag == .windows) {
+        @export(fileno, .{ .name = "_fileno" });
+        @export(isatty, .{ .name = "_isatty" });
+        @export(popen, .{ .name = "_popen" });
+        @export(pclose, .{ .name = "_pclose" });
     }
 }

@@ -181,7 +181,7 @@ pub fn build(b: *std.build.Builder) void {
     }
     addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     addTinyRegexCTests(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
-    _ = addLua(b, target, mode, libc_only_std_static, zig_start);
+    _ = addLua(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
     _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYabfc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
@@ -331,6 +331,7 @@ fn addLua(
     target: anytype,
     mode: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
+    libc_only_posix: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
     const lua_repo = GitRepoStep.create(b, .{
@@ -364,6 +365,7 @@ fn addLua(
 
     lua_exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     lua_exe.linkLibrary(libc_only_std_static);
+    lua_exe.linkLibrary(libc_only_posix);
     lua_exe.linkLibrary(zig_start);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
     if (target.getOs().tag == .windows) {

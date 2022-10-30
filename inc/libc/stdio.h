@@ -101,7 +101,9 @@ void perror(const char *s);
 #endif
 
 #ifdef _WIN32
+    int _fileno(FILE *);
     FILE *_popen(const char *command, const char *mode);
+    int _pclose(FILE *);
 #endif
 
 #endif /* _STDIO_H */

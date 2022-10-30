@@ -47,7 +47,7 @@ const windows = struct {
         }
         out_written.* = written;
     }
-    pub extern "KERNEL32" fn CreateFileA(
+    pub extern "kernel32" fn CreateFileA(
         lpFileName: ?[*:0]const u8,
         dwDesiredAccess: u32,
         dwShareMode: u32,
@@ -688,7 +688,11 @@ export fn getc(stream: *c.FILE) callconv(.C) c_int {
     trace.log("getc {*}", .{stream});
 
     if (builtin.os.tag == .windows) {
-        @panic("getc not implemented on Windows");
+        var buf: [1]u8 = undefined;
+        const len = _fread_buf(&buf, 1, stream);
+        if (len == 0) return c.EOF;
+        std.debug.assert(len == 1);
+        return buf[0];
     }
 
     var buf: [1]u8 = undefined;
@@ -719,7 +723,21 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
     // TODO: should I check stream.eof here?
 
     if (builtin.os.tag == .windows) {
-        @panic("_fread_buf not implemented for Windows");
+        const actual_read_len = @intCast(u32, std.math.min(@as(u32, std.math.maxInt(u32)), size));
+        while (true) {
+            var amt_read: u32 = undefined;
+            // TODO: is stream.fd.? right?
+            if (std.os.windows.kernel32.ReadFile(stream.fd.?, ptr, actual_read_len, &amt_read, null) == 0) {
+                switch (std.os.windows.kernel32.GetLastError()) {
+                    .OPERATION_ABORTED => continue,
+                    .BROKEN_PIPE => return 0,
+                    .HANDLE_EOF => return 0,
+                    else => |err|
+                        std.debug.panic("ReadFile unexpected error {}", .{err}),
+                }
+            }
+            return @intCast(usize, amt_read);
+        }
     }
 
     // Prevents EINVAL.
