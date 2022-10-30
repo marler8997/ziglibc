@@ -375,6 +375,14 @@ fn addLua(
     const step = b.step("lua", "build the LUA interpreter");
     step.dependOn(&lua_exe.install_step.?.step);
 
+    const test_step = b.step("lua-test", "Run the lua tests");
+
+    for ([_][]const u8{ "bwcoercion.lua", "tracegc.lua" }) |test_file| {
+        var run_test = lua_exe.run();
+        run_test.addArg(b.pathJoin(&.{ lua_repo_path, "testes", test_file }));
+        test_step.dependOn(&run_test.step);
+    }
+
     return lua_exe;
 }
 

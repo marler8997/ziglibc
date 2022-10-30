@@ -77,6 +77,14 @@ int main(int argc, char *argv[])
   check_size_atleast(uint_fast32_t, 4);
   check_size_atleast(uint_fast64_t, 8);
 
+  check_equal("SCHAR_MAX", "%d", 127, SCHAR_MAX);
+  check_equal("UCHAR_MAX", "%d", 255, UCHAR_MAX);
+  if ((int)((char)-1) == -1) {
+      check_equal("CHAR_MAX", "%d", SCHAR_MAX, CHAR_MAX);
+  } else {
+      check_equal("CHAR_MAX", "%d", UCHAR_MAX, CHAR_MAX);
+  }
+
   if (INT_MAX == 2147483647) {
     check_equal("UINT_MAX", "%u", 0xffffffff, UINT_MAX);
     check_sizeof(int, 4);

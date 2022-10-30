@@ -11,6 +11,7 @@ const c = @cImport({
     @cInclude("locale.h");
     @cInclude("time.h");
     @cInclude("signal.h");
+    @cInclude("limits.h");
 });
 
 const trace = @import("trace.zig");
@@ -498,10 +499,18 @@ fn strto(
     return x;
 }
 
-export fn strtod(nptr: [*:0]const u8, endptr: [*][*:0]const u8) callconv(.C) f64 {
-    _ = nptr;
-    _ = endptr;
-    @panic("strtod not implemented");
+export fn strtod(nptr: [*:0]const u8, endptr: ?*[*:0]const u8) callconv(.C) f64 {
+    trace.log("strtod {}", .{trace.fmtStr(nptr)});
+    const str_len: usize = if (endptr) |e| @ptrToInt(e.*) - @ptrToInt(nptr) else std.mem.len(nptr);
+    if (str_len == 0) {
+        return 0;
+    }
+    const result = std.fmt.parseFloat(f64, nptr[0 .. str_len]) catch |err| switch (err) {
+        error.InvalidCharacter => {
+            std.debug.panic("todo: strtod handle InvalidCharacter for '{s}'", .{nptr[0 .. str_len]});
+        },
+    };
+    return result;
 }
 
 export fn strtol(nptr: [*:0]const u8, endptr: ?*[*:0]const u8, base: c_int) callconv(.C) c_long {
@@ -612,7 +621,39 @@ const global = struct {
     // TODO: these don't need to be contiguous, use a chain of fixed size chunks
     //       that don't need to move/be resized ChunkedArrayList or something
     var atexit_funcs: std.ArrayListUnmanaged(ExitFunc) = .{};
+
+    var decimal_point = [_:0]u8 { '.' };
+    var thousands_sep = [_:0]u8 { };
+    var grouping = [_:0]u8 { };
+    var int_curr_symbol = [_:0]u8 { };
+    var currency_symbol = [_:0]u8 { };
+    var mon_decimal_point = [_:0]u8 { };
+    var mon_thousands_sep = [_:0]u8 { };
+    var mon_grouping = [_:0]u8 { };
+    var positive_sign = [_:0]u8 { };
+    var negative_sign = [_:0]u8 { };
+    var localeconv = c.struct_lconv{
+        .decimal_point = &decimal_point,
+        .thousands_sep = &thousands_sep,
+        .grouping = &grouping,
+        .int_curr_symbol = &int_curr_symbol,
+        .currency_symbol = &currency_symbol,
+        .mon_decimal_point = &mon_decimal_point,
+        .mon_thousands_sep = &mon_thousands_sep,
+        .mon_grouping = &mon_grouping,
+        .positive_sign = &positive_sign,
+        .negative_sign = &negative_sign,
+        .int_frac_digits = c.CHAR_MAX,
+        .frac_digits = c.CHAR_MAX,
+        .p_cs_precedes = c.CHAR_MAX,
+        .p_sep_by_space = c.CHAR_MAX,
+        .n_cs_precedes = c.CHAR_MAX,
+        .n_sep_by_space = c.CHAR_MAX,
+        .p_sign_posn = c.CHAR_MAX,
+        .n_sign_posn = c.CHAR_MAX,
+    };
 };
+
 export const stdin: *c.FILE = &global.files[0];
 export const stdout: *c.FILE = &global.files[1];
 export const stderr: *c.FILE = &global.files[2];
@@ -1090,7 +1131,8 @@ export fn setlocale(category: c_int, locale: [*:0]const u8) callconv(.C) [*:0]u8
 }
 
 export fn localeconv() callconv(.C) *c.lconv {
-    @panic("localeconv not implemented");
+    trace.log("localeconv", .{});
+    return &global.localeconv;
 }
 
 // --------------------------------------------------------------------------------

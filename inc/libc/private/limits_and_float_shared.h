@@ -14,11 +14,11 @@
 #define UCHAR_MAX 255
 
 /*  if the 'char' type is unsigned */
-#define CHAR_MIN 0
-#define CHAR_MAX UCHAR_MAX
+/* #define CHAR_MIN 0 */
+/* #define CHAR_MAX UCHAR_MAX */
 /* if the 'char' type is signed */
-/* #define CHAR_MIN SCHAR_MIN */
-/* #define CHAR_MAX SCHAR_MAX */
+#define CHAR_MIN SCHAR_MIN
+#define CHAR_MAX SCHAR_MAX
 
 /*  maximum number of bytes in a multibyte character, for any supported locale MB_LEN_MAX 1 */
 /*  for now we assume wchar_t (multibyte characters) are 4 bytes */
