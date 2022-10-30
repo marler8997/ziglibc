@@ -554,6 +554,11 @@ const SignalFn = switch (builtin.zig_backend) {
     else => *const fn(c_int) callconv(.C) void,
 };
 export fn signal(sig: c_int, func: SignalFn) callconv(.C) ?SignalFn {
+    if (builtin.os.tag == .windows) {
+        // TODO: maybe we can emulate/handle some signals?
+        trace.log("ignoring the 'signal' function (sig={}) on windows", .{sig});
+        return null;
+    }
     if (builtin.os.tag == .linux) {
         var action = std.os.Sigaction{
             .handler = .{ .handler = func },

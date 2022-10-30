@@ -184,7 +184,10 @@ fn randomizeTempFilename(slice: *[6]u8) void {
 // stdio
 // --------------------------------------------------------------------------------
 export fn fileno(stream: *c.FILE) callconv(.C) c_int {
-    _ = stream;
+    if (builtin.os.tag == .windows) {
+        // this probably isn't right, but might be fine for an initial implementation
+        return @intCast(c_int, @ptrToInt(stream.fd));
+    }
     @panic("fileno not implemented");
 }
 
