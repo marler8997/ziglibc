@@ -179,6 +179,14 @@ pub fn build(b: *std.build.Builder) void {
             test_step.dependOn(&run.step);
         }
     }
+    {
+        const exe = addTest("jmp", b, target, mode, libc_only_std_static, zig_start);
+        const run_step = exe.run();
+        run_step.stdout_action = .{
+            .expect_exact = "Success!\n",
+        };
+        test_step.dependOn(&run_step.step);
+    }
     addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     addTinyRegexCTests(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addLua(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);

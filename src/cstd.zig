@@ -1133,23 +1133,6 @@ export fn pow(x: f64, y: f64) callconv(.C) f64 {
 }
 
 // --------------------------------------------------------------------------------
-// setjmp
-// --------------------------------------------------------------------------------
-export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
-    trace.log("setjmp", .{});
-    // not implemented, but we'll just return success for now
-    // and throw a not-implemented error in longjmp
-    _ = env;
-    return 0;
-}
-
-export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
-    trace.log("longjmp {}", .{val});
-    _ = env;
-    @panic("longjmp not implemented");
-}
-
-// --------------------------------------------------------------------------------
 // locale
 // --------------------------------------------------------------------------------
 export fn setlocale(category: c_int, locale: [*:0]const u8) callconv(.C) [*:0]u8 {
