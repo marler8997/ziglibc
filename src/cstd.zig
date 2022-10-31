@@ -1139,14 +1139,47 @@ export fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
     trace.log("setjmp", .{});
     // not implemented, but we'll just return success for now
     // and throw a not-implemented error in longjmp
-    _ = env;
+    //_ = env;
+
+    // TODO: save stack/frame pointers, return address
+
+    _ = asm volatile (
+        \\ mov %rbx,(%rdi)
+        \\ mov %rbp,8(%rdi)
+        \\ mov %r12,16(%rdi)
+        \\ mov %r13,24(%rdi)
+        \\ mov %r14,32(%rdi)
+        \\ mov %r15,40(%rdi)
+
+        // outputs
+        //: [ret] "={eax}" (-> u32),
+        :
+        // inputs
+        : [env] "{rdi}" (env)
+        // clobbers
+        //: "eax", "edx", "ecx"
+        : "ecx"
+    );
     return 0;
 }
 
-export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) void {
+export fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) noreturn {
     trace.log("longjmp {}", .{val});
     _ = env;
-    @panic("longjmp not implemented");
+    //_ = val;
+    _ = asm volatile (
+//        \\ xor %%eax, %%eax
+        \\ xor %%ecx, %%ecx
+        // outputs
+        //: [ret] "={eax}" (-> u32),
+        :
+        // inputs
+        :
+        // clobbers
+        //: "eax", "edx", "ecx"
+        : "ecx"
+    );
+    @panic("todo: implement longjmp");
 }
 
 // --------------------------------------------------------------------------------

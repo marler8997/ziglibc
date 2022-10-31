@@ -1,0 +1,38 @@
+#include <setjmp.h>
+#include <stdio.h>
+
+void do_longjmp(jmp_buf env, int val)
+{
+    fprintf(stderr, "longjmp val=%d\n", val);
+    longjmp(env, val);
+}
+
+int main(int argc, char *argv[])
+{
+    int got_one = 0;
+    
+    jmp_buf env;
+    int result = setjmp(env);
+    fprintf(stderr, "setjmp returned %d\n", result);
+    if (result > 1) {
+        printf("Success!\n");
+        return  0;
+    }
+
+    if (result == 0) {
+        do_longjmp(env, 0);
+    } else if (result == 1) {
+        if (!got_one) {
+            got_one = 1;
+            do_longjmp(env, 1);
+        } else {
+            do_longjmp(env, 2);
+        }
+    } else if (result == 2) {
+        printf("Success\n");
+        return 0;
+    }
+
+    fprintf(stderr, "should never get here\n");
+    return 0xff;
+}
