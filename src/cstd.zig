@@ -1274,3 +1274,23 @@ export fn __zassert_fail(
         expression, file, line, func });
     abort();
 }
+
+// --------------------------------------------------------------------------------
+// setjmp
+// --------------------------------------------------------------------------------
+fn setjmp(env: c.jmp_buf) callconv(.C) c_int {
+    _ = env;
+    @panic("setjmp not implemented on this platform yet");
+}
+fn longjmp(env: c.jmp_buf, val: c_int) callconv(.C) noreturn {
+    _ = env;
+    _ = val;
+    @panic("longjmp not implemented on this platform yet");
+}
+comptime {
+    // temporary to get windows to link for now
+    if (builtin.os.tag == .windows) {
+        @export(setjmp, .{ .name = "setjmp" });
+        @export(longjmp, .{ .name = "longjmp" });
+    }
+}

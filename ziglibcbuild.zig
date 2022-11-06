@@ -19,6 +19,7 @@ pub const ZigLibcOptions = struct {
     link: LinkKind,
     start: Start,
     trace: bool,
+    target: std.zig.CrossTarget,
 };
 
 /// Provides a _start symbol that will call C main
@@ -55,6 +56,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
             else => .unversioned,
         }),
     };
+    lib.setTarget(opt.target);
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;
@@ -71,7 +73,9 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     if (include_cstd) {
         lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "printf.c", &c_flags);
         lib.addCSourceFile("src" ++ std.fs.path.sep_str ++ "scanf.c", &c_flags);
-        lib.addAssemblyFile("src" ++ std.fs.path.sep_str ++ "jmp.s");
+        if (opt.target.getOsTag() == .linux) {
+            lib.addAssemblyFile("src/linux/jmp.s");
+        }
     }
     const include_posix = switch (opt.variant) {
         .only_posix, .full => true,

@@ -27,6 +27,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .static,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_full_static.setTarget(target);
     libc_full_static.setBuildMode(mode);
@@ -36,6 +37,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .shared,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_full_shared.setTarget(target);
     libc_full_shared.setBuildMode(mode);
@@ -49,6 +51,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .static,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_only_std_static.setTarget(target);
     libc_only_std_static.setBuildMode(mode);
@@ -58,6 +61,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .shared,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_only_std_shared.setTarget(target);
     libc_only_std_shared.setBuildMode(mode);
@@ -68,6 +72,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .static,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_only_posix.setTarget(target);
     libc_only_posix.setBuildMode(mode);
@@ -78,6 +83,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .static,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_only_linux.setTarget(target);
     libc_only_linux.setBuildMode(mode);
@@ -88,6 +94,7 @@ pub fn build(b: *std.build.Builder) void {
         .link = .static,
         .start = .ziglibc,
         .trace = trace_enabled,
+        .target = target,
     });
     libc_only_gnu.setTarget(target);
     libc_only_gnu.setBuildMode(mode);
@@ -179,7 +186,9 @@ pub fn build(b: *std.build.Builder) void {
             test_step.dependOn(&run.step);
         }
     }
-    {
+
+    // this test only works on linux right now
+    if (target.getOsTag() == .linux) {
         const exe = addTest("jmp", b, target, mode, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
@@ -187,6 +196,7 @@ pub fn build(b: *std.build.Builder) void {
         };
         test_step.dependOn(&run_step.step);
     }
+
     addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     addTinyRegexCTests(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addLua(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
