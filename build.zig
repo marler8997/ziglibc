@@ -2,6 +2,8 @@ const std = @import("std");
 const GitRepoStep = @import("GitRepoStep.zig");
 const libcbuild = @import("ziglibcbuild.zig");
 const luabuild = @import("luabuild.zig");
+const awkbuild = @import("awkbuild.zig");
+const gnumakebuild = @import("gnumakebuild.zig");
 
 pub fn build(b: *std.build.Builder) void {
     const trace_enabled = b.option(bool, "trace", "enable libc tracing") orelse false;
@@ -204,6 +206,8 @@ pub fn build(b: *std.build.Builder) void {
     _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
     _ = addYabfc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
     _ = addSecretGame(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
+    _ = awkbuild.addAwk(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
+    _ = gnumakebuild.addGnuMake(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
 
     _ = @import("busybox/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
     _ = @import("ncurses/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);

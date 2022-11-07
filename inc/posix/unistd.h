@@ -4,6 +4,7 @@
 #include "../libc/private/size_t.h"
 #include "private/getopt.h"
 #include "private/ssize_t.h"
+#include "private/off_t.h"
 
 #define X_OK 1
 #define R_OK 4
@@ -26,5 +27,7 @@ void _exit(int status);
 
 int gethostname(char *name, size_t namelen);
 int isatty(int filedes);
+
+//off_t lseek(int fildes, off_t offset, int whence);
 
 #endif /* _UNISTD_H */
