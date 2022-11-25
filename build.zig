@@ -274,7 +274,7 @@ fn addLibcTest(
 
     // strtol, it seems there might be some disagreement between libc-test/glibc
     // about how strtoul interprets negative numbers, so leaving out strtol for now
-    inline for (.{ "argv", "clock_gettime", "string" } ) |name| {
+    inline for (.{ "argv", "basename", "clock_gettime", "string" } ) |name| {
         const exe = b.addExecutable("libc-test-functional-" ++ name, b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}));
         exe.addCSourceFiles(common_src, &[_][]const u8 {});
         exe.setTarget(target);

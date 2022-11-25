@@ -342,6 +342,25 @@ export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
 }
 
 // --------------------------------------------------------------------------------
+// libgen
+// --------------------------------------------------------------------------------
+export fn basename(path: ?[*:0]u8) callconv(.C) [*:0]u8 {
+    trace.log("basename {}", .{trace.fmtStr(path)});
+    const path_slice = std.mem.span(path orelse return @intToPtr([*:0]u8, @ptrToInt(".")));
+    const name = std.fs.path.basename(path_slice);
+    const mut_ptr = @intToPtr([*:0]u8, @ptrToInt(name.ptr));
+    if (name.len == 0) {
+        if (path_slice.ptr[0] == '/') {
+            path_slice.ptr[1] = 0;
+            return path_slice.ptr;
+        }
+        return @intToPtr([*:0]u8, @ptrToInt("."));
+    }
+    if (mut_ptr[name.len] != 0) mut_ptr[name.len] = 0;
+    return mut_ptr;
+}
+
+// --------------------------------------------------------------------------------
 // termios
 // --------------------------------------------------------------------------------
 export fn tcgetattr(fd: c_int, ios: *os.linux.termios) callconv(.C) c_int {
