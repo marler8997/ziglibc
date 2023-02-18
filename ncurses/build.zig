@@ -145,7 +145,7 @@ pub fn add(
     for ([_][]const u8 { "lib_initscr.c" }) |src| {
         files.append(b.pathJoin(&.{repo_path, "ncurses", "base", src})) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c99",
     });
     exe.addIncludePath(b.pathJoin(&.{repo_path, "include"}));

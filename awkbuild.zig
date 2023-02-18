@@ -40,7 +40,7 @@ pub fn addAwk(
         files.append(b.pathJoin(&.{repo_path, "src", src})) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c11",
     });
 

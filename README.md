@@ -22,6 +22,8 @@ zig cc \
     -lc
 ```
 
+Currently builds with zig version `0.11.0-dev.1507+6f13a725a`.
+
 # Thoughts
 
 I'd like a common codebase that can create libc headers that emulate various libc implementations.

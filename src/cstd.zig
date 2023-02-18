@@ -174,15 +174,13 @@ export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]
     }
 
     const gpa_size = alloc_metadata_len + size;
-    if (gpa_size <= gpa_buf.len) {
-        const result = global.gpa.allocator().rawResize(gpa_buf, alloc_align, gpa_size, 0, @returnAddress());
-        std.debug.assert(result == gpa_size);
+    if (global.gpa.allocator().rawResize(gpa_buf, std.math.log2(alloc_align), gpa_size, @returnAddress())) {
         trace.log("realloc return {*}", .{ptr});
         return ptr;
     }
 
     const new_buf = global.gpa.allocator().reallocAdvanced(
-        gpa_buf, alloc_align, gpa_size, .exact
+        gpa_buf, gpa_size, @returnAddress(),
     ) catch |e| switch (e) {
         error.OutOfMemory => {
             trace.log("realloc out-of-mem from {} to {}", .{gpa_buf.len, gpa_size});
@@ -322,7 +320,7 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     trace.log("strcpy {*} {*}", .{s1, s2});
     @memcpy(s1, s2, std.mem.len(s2) + 1);
-    return std.meta.assumeSentinel(s1, 0);
+    return @ptrCast([*:0]u8, s1); // TODO: use std.meta.assumeSentinel if it's brought back
 }
 
 // TODO: find out which standard this function comes from
@@ -338,14 +336,14 @@ export fn strncpy(s1: [*]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*]u8 {
 //       they don't appear to be a part of any standard.
 //       not sure whether they should live in this library or a separate one
 //       see https://lwn.net/Articles/507319/
-export fn strlcpy(dst: [*]u8, src: [*]const u8, size: usize) callconv(.C) usize {
+export fn strlcpy(dst: [*]u8, src: [*:0]const u8, size: usize) callconv(.C) usize {
     trace.log("strncpy {*} {*} n={}", .{dst, src, size});
     var i: usize = 0;
     while (true) : (i += 1) {
         if (i == size) {
             if (size > 0)
                 dst[size - 1] = 0;
-            return i + strlen(std.meta.assumeSentinel(src + i, 0));
+            return i + strlen(src + i);
         }
         dst[i] = src[i];
         if (src[i] == 0) {
@@ -542,7 +540,7 @@ export fn strtoull(nptr: [*:0]const u8, endptr: ?*[*:0]u8, base: c_int) callconv
 export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
     std.log.warn("sterror (num={}) not implemented", .{errnum});
     _ = std.fmt.bufPrint(&global.tmp_strerror_buffer, "{}", .{errnum}) catch @panic("BUG");
-    return std.meta.assumeSentinel(&global.tmp_strerror_buffer, 0);
+    return @ptrCast([*:0]const u8, &global.tmp_strerror_buffer); // TODO: use std.meta.assumeSentinel if it's brought back
 }
 
 
@@ -1198,7 +1196,7 @@ export fn strftime(s: [*]u8, maxsize: usize, format: [*:0]const u8, timeptr: *co
 // --------------------------------------------------------------------------------
 export fn isalnum(char: c_int) callconv(.C) c_int {
     trace.log("isalnum {}", .{char});
-    return @boolToInt(std.ascii.isAlNum(std.math.cast(u8, char) orelse return 0));
+    return @boolToInt(std.ascii.isAlphanumeric(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn toupper(char: c_int) callconv(.C) c_int {
@@ -1213,17 +1211,17 @@ export fn tolower(char: c_int) callconv(.C) c_int {
 
 export fn isspace(char: c_int) callconv(.C) c_int {
     trace.log("isspace {}", .{char});
-    return @boolToInt(std.ascii.isSpace(std.math.cast(u8, char) orelse return 0));
+    return @boolToInt(std.ascii.isWhitespace(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isxdigit(char: c_int) callconv(.C) c_int {
     trace.log("isxdigit {}", .{char});
-    return @boolToInt(std.ascii.isXDigit(std.math.cast(u8, char) orelse return 0));
+    return @boolToInt(std.ascii.isHex(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn iscntrl(char: c_int) callconv(.C) c_int {
     trace.log("iscntrl {}", .{char});
-    return @boolToInt(std.ascii.isCntrl(std.math.cast(u8, char) orelse return 0));
+    return @boolToInt(std.ascii.isControl(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isdigit(char: c_int) callconv(.C) c_int {
@@ -1233,12 +1231,12 @@ export fn isdigit(char: c_int) callconv(.C) c_int {
 
 export fn isalpha(char: c_int) callconv(.C) c_int {
     trace.log("isalhpa {}", .{char});
-    return @boolToInt(std.ascii.isAlpha(std.math.cast(u8, char) orelse return 0));
+    return @boolToInt(std.ascii.isAlphabetic(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isgraph(char: c_int) callconv(.C) c_int {
     trace.log("isgraph {}", .{char});
-    return @boolToInt(std.ascii.isGraph(std.math.cast(u8, char) orelse return 0));
+    return @boolToInt(std.ascii.isPrint(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn islower(char: c_int) callconv(.C) c_int {
@@ -1253,7 +1251,8 @@ export fn isupper(char: c_int) callconv(.C) c_int {
 
 export fn ispunct(char: c_int) callconv(.C) c_int {
     trace.log("ispunct {}", .{char});
-    return @boolToInt(std.ascii.isPunct(std.math.cast(u8, char) orelse return 0));
+    const c_u8 = std.math.cast(u8, char) orelse return 0;
+    return @boolToInt(std.ascii.isPrint(c_u8) and !std.ascii.isAlphanumeric(c_u8));
 }
 
 export fn isprint(char: c_int) callconv(.C) c_int {

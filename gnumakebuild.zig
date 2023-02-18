@@ -79,7 +79,7 @@ pub fn addGnuMake(
     }
 
     exe.addIncludePath(b.pathJoin(&.{repo_path, "src"}));
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c99",
         "-DHAVE_CONFIG_H",
         "-Wall", "-Wextra", "-Werror", "-Wwrite-strings", "-Wshadow", "-Wdeclaration-after-statement",

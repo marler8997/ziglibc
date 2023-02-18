@@ -57,7 +57,7 @@ pub fn add(
     for (sources) |src| {
         files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c99",
     });
     exe.addIncludePath(b.pathJoin(&.{repo_path, "include"}));

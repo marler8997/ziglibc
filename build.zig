@@ -325,7 +325,7 @@ fn addTinyRegexCTests(
             files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
         }
 
-        exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+        exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
             "-std=c99",
         });
         exe.addIncludePath(repo_path);
@@ -379,7 +379,7 @@ fn addLua(
         files.append(b.pathJoin(&.{ lua_repo_path, obj ++ ".c" })) catch unreachable;
     }
 
-    lua_exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8{
+    lua_exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-nostdinc",
         "-nostdlib",
         "-std=c99",
@@ -449,7 +449,7 @@ fn addCmph(
         files.append(b.pathJoin(&.{repo_path, "src", src})) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c11",
     });
 
@@ -524,7 +524,7 @@ fn addYacc(
         files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c90",
     });
 
@@ -573,7 +573,7 @@ fn addYabfc(
     for (sources) |src| {
         files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c99",
     });
 
@@ -626,7 +626,7 @@ fn addSecretGame(
     for (sources) |src| {
         files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice(), &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
         "-std=c90",
     });
 

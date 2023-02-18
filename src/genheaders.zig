@@ -143,7 +143,7 @@ fn parseDefinition(
             return ReportedError.Reported;
         }
     }
-    def.*.headers = headers.toOwnedSlice(allocator);
+    def.*.headers = try headers.toOwnedSlice(allocator);
     return def;
 }
 
