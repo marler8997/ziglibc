@@ -4,6 +4,18 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+// --------------------------------------------------------------------------------
+// fcntl
+// --------------------------------------------------------------------------------
+int open(const char *path, int oflag, lll)
+{
+    fprintf(stderr, "open function not implemented\n");
+    abort();
+}
+
+// --------------------------------------------------------------------------------
+// sys/ioctl
+// --------------------------------------------------------------------------------
 int _ioctlArgPtr(int fd, unsigned long request, void *arg);
 
 int ioctl(int fd, unsigned long request, ...)

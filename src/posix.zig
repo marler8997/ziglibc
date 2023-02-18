@@ -12,6 +12,7 @@ const c = @cImport({
     @cInclude("termios.h");
     @cInclude("sys/time.h");
     @cInclude("sys/stat.h");
+    @cInclude("sys/select.h");
 });
 
 const cstd = struct {
@@ -216,6 +217,12 @@ export fn fdopen(fd: c_int, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
 // --------------------------------------------------------------------------------
 // unistd
 // --------------------------------------------------------------------------------
+export fn close(fd: c_int) callconv(.C) c_int {
+    trace.log("close {}", .{fd});
+    std.os.close(fd);
+    return 0;
+}
+
 export fn access(path: [*:0]const u8, amode: c_int) callconv(.C) c_int {
     trace.log("access '{}' mode=0x{x}", .{trace.fmtStr(path), amode});
     @panic("acces not implemented");
@@ -331,6 +338,12 @@ export fn chmod(path: [*:0]const u8, mode: c.mode_t) callconv(.C) c_int {
     @panic("chmod not implemented");
 }
 
+export fn fstat(fd: c_int, buf: *c.struct_stat) c_int {
+    _ = fd;
+    _ = buf;
+    @panic("fstat not implemented");
+}
+
 export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
     trace.log("umask 0x{x}", .{mode});
     const old_mode = os.linux.syscall1(.umask, @intCast(usize, mode));
@@ -417,6 +430,22 @@ export fn _ioctlArgPtr(fd: c_int, request: c_ulong, arg_ptr: *anyopaque) c_int {
             return -1;
         },
     }
+}
+
+// --------------------------------------------------------------------------------
+// sys/select
+// --------------------------------------------------------------------------------
+export fn select(
+    nfds: c_int,
+    readfds: ?*c.fd_set,
+    writefds: ?*c.fd_set,
+    errorfds: ?*c.fd_set,
+    timeout: ?*c.timespec,
+) c_int {
+    _ = nfds;
+    _ = readfds; _ = writefds; _ = errorfds;
+    _ = timeout;
+    @panic("TODO: implement select");
 }
 
 // --------------------------------------------------------------------------------

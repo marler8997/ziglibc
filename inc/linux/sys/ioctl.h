@@ -4,6 +4,7 @@
 // TODO: will change depending on platform
 #define FIONBIO 0x5421
 
-int ioctl(int fd, unsigned long request, ...);
+// It looks like this is defined in posix/sys/ioctl.h
+//int ioctl(int fd, unsigned long request, ...);
 
 #endif /*  _SYS_IOCTL_H */
