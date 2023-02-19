@@ -4,9 +4,9 @@
 #include "private/null.h"
 #include "private/size_t.h"
 #include "private/wchar_t.h"
+#include "private/_zig_isize.h"
 
-// TODO: look into this more
-typedef int ptrdiff_t;
+typedef _zig_isize ptrdiff_t;
 
 #define offsetof(type, member) __builtin_offsetof(type, member)
 

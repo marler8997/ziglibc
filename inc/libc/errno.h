@@ -20,6 +20,7 @@ extern int errno;
     #define EEXIST 17
     #define EINVAL 22
     #define ENOTTY 25
+    #define EPIPE 32
     #define EDOM 33
     #define ERANGE 34
     #define EWOULDBLOCK 140

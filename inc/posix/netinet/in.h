@@ -4,6 +4,7 @@
 #include "../../libc/private/uint8_t.h"
 #include "../../libc/private/uint32_t.h"
 #include "../private/sockaddr.h"
+#include "../private/in_addr_t.h"
 
 #define IPPORT_RESERVED 1024
 #define IPPORT_USERRESERVED 5000
@@ -14,7 +15,6 @@
 
 #define INADDR_ANY 0
 
-typedef uint32_t in_addr_t;
 struct in_addr {
   in_addr_t s_addr;
 };

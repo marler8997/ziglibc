@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -44,6 +45,7 @@ int main(int argc, char *argv[])
 
   check_sizeof(size_t, ptr_width);
   check_sizeof(ssize_t, ptr_width);
+  check_sizeof(ptrdiff_t, ptr_width);
   check_sizeof(int8_t, 1);
   check_sizeof(uint8_t, 1);
   check_sizeof(int16_t, 2);

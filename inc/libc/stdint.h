@@ -13,6 +13,7 @@
 #include "private/uint32_t.h"
 #include "private/int64_t.h"
 #include "private/uint64_t.h"
+#include "private/_zig_isize.h"
 
 typedef int8_t int_least8_t;
 typedef int16_t int_least16_t;
@@ -86,9 +87,8 @@ typedef long long intmax_t;
 typedef unsigned long long uintmax_t;
 typedef struct { intmax_t quot, rem; } imaxdiv_t;
 
-#if __STDC_VERSION__ >= 201112L
-    // apparently this type is "optional" in c99 according to https://en.cppreference.com/w/c/types/integer
-    typedef long int intptr_t; // TODO: fix this
+#if __STDC_VERSION__ >= 199901L
+    typedef _zig_isize intptr_t;
 #endif
 
 #endif /* _STDINT_H */
