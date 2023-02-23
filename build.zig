@@ -5,22 +5,23 @@ const luabuild = @import("luabuild.zig");
 const awkbuild = @import("awkbuild.zig");
 const gnumakebuild = @import("gnumakebuild.zig");
 
-pub fn build(b: *std.build.Builder) void {
+pub fn build(b: *std.Build) void {
     const trace_enabled = b.option(bool, "trace", "enable libc tracing") orelse false;
 
     {
-        const exe = b.addExecutable("genheaders", "src" ++ std.fs.path.sep_str ++ "genheaders.zig");
+        const exe = b.addExecutable(.{
+            .name = "genheaders",
+            .root_source_file = .{ .path = "src" ++ std.fs.path.sep_str ++ "genheaders.zig" },
+        });
         const run = exe.run();
         run.addArg(b.pathFromRoot("capi.txt"));
         b.step("genheaders", "Generate C Headers").dependOn(&run.step);
     }
 
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
+    const mode = b.standardOptimizeOption(.{});
 
-    const zig_start = libcbuild.addZigStart(b);
-    zig_start.setTarget(target);
-    zig_start.setBuildMode(mode);
+    const zig_start = libcbuild.addZigStart(b, target, mode);
     zig_start.install();
     b.step("start", "").dependOn(&zig_start.install_step.?.step);
 
@@ -30,9 +31,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_full_static.setTarget(target);
-    libc_full_static.setBuildMode(mode);
     libc_full_static.install();
     const libc_full_shared = libcbuild.addLibc(b, .{
         .variant = .full,
@@ -40,9 +40,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_full_shared.setTarget(target);
-    libc_full_shared.setBuildMode(mode);
     libc_full_shared.install();
     b.step("libc-full-shared", "").dependOn(&libc_full_shared.install_step.?.step);
     // TODO: create a specs file?
@@ -54,9 +53,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_only_std_static.setTarget(target);
-    libc_only_std_static.setBuildMode(mode);
     libc_only_std_static.install();
     const libc_only_std_shared = libcbuild.addLibc(b, .{
         .variant = .only_std,
@@ -64,9 +62,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_only_std_shared.setTarget(target);
-    libc_only_std_shared.setBuildMode(mode);
     libc_only_std_shared.install();
 
     const libc_only_posix = libcbuild.addLibc(b, .{
@@ -75,9 +72,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_only_posix.setTarget(target);
-    libc_only_posix.setBuildMode(mode);
     libc_only_posix.install();
 
     const libc_only_linux = libcbuild.addLibc(b, .{
@@ -86,9 +82,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_only_linux.setTarget(target);
-    libc_only_linux.setBuildMode(mode);
     libc_only_linux.install();
 
     const libc_only_gnu = libcbuild.addLibc(b, .{
@@ -97,16 +92,18 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = mode,
     });
-    libc_only_gnu.setTarget(target);
-    libc_only_gnu.setBuildMode(mode);
     libc_only_gnu.install();
 
     const test_step = b.step("test", "Run unit tests");
 
-    const test_env_exe = b.addExecutable("testenv", "test" ++ std.fs.path.sep_str ++ "testenv.zig");
-    test_env_exe.setTarget(target);
-    test_env_exe.setBuildMode(mode);
+    const test_env_exe = b.addExecutable(.{
+        .name = "testenv",
+        .root_source_file = .{ .path = "test" ++ std.fs.path.sep_str ++ "testenv.zig" },
+        .target = target,
+        .optimize = mode,
+    });
 
     {
         const exe = addTest("hello", b, target, mode, libc_only_std_static, zig_start);
@@ -177,7 +174,7 @@ pub fn build(b: *std.build.Builder) void {
         }
         {
             const run = exe.run();
-            run.addArgs(&.{ "-a" });
+            run.addArgs(&.{"-a"});
             run.stdout_action = .{ .expect_exact = "aflag=1, c_arg='(null)'\n" };
             test_step.dependOn(&run.step);
         }
@@ -226,14 +223,17 @@ fn addTest(
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
-    const exe = b.addExecutable(name, "test" ++ std.fs.path.sep_str ++ name ++ ".c");
-    exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8 { });
+    const exe = b.addExecutable(.{
+        .name = name,
+        .root_source_file = .{ .path = "test" ++ std.fs.path.sep_str ++ name ++ ".c" },
+        .target = target,
+        .optimize = mode,
+    });
+    exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8{});
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
     if (target.getOs().tag == .windows) {
         exe.linkSystemLibrary("ntdll");
@@ -259,26 +259,32 @@ fn addLibcTest(
     const libc_test_step = b.step("libc-test", "run tests from the libc-test project");
 
     // inttypes
-    inline for (.{ "assert", "ctype", "errno", "main", "stdbool", "stddef", "string" } ) |name| {
-        const lib = b.addObject("libc-test-api-" ++ name, b.pathJoin(&.{libc_test_path, "src", "api", name ++ ".c"}));
-        lib.setTarget(target);
-        lib.setBuildMode(mode);
+    inline for (.{ "assert", "ctype", "errno", "main", "stdbool", "stddef", "string" }) |name| {
+        const lib = b.addObject(.{
+            .name = "libc-test-api-" ++ name,
+            .root_source_file = .{ .path = b.pathJoin(&.{ libc_test_path, "src", "api", name ++ ".c" }) },
+            .target = target,
+            .optimize = mode,
+        });
         lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         lib.step.dependOn(&libc_test_repo.step);
         libc_test_step.dependOn(&lib.step);
     }
-    const libc_inc_path = b.pathJoin(&.{libc_test_path, "src", "common"});
-    const common_src = &[_][]const u8 {
-        b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
+    const libc_inc_path = b.pathJoin(&.{ libc_test_path, "src", "common" });
+    const common_src = &[_][]const u8{
+        b.pathJoin(&.{ libc_test_path, "src", "common", "print.c" }),
     };
 
     // strtol, it seems there might be some disagreement between libc-test/glibc
     // about how strtoul interprets negative numbers, so leaving out strtol for now
-    inline for (.{ "argv", "basename", "clock_gettime", "string" } ) |name| {
-        const exe = b.addExecutable("libc-test-functional-" ++ name, b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}));
-        exe.addCSourceFiles(common_src, &[_][]const u8 {});
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
+    inline for (.{ "argv", "basename", "clock_gettime", "string" }) |name| {
+        const exe = b.addExecutable(.{
+            .name = "libc-test-functional-" ++ name,
+            .root_source_file = .{ .path = b.pathJoin(&.{ libc_test_path, "src", "functional", name ++ ".c" }) },
+            .target = target,
+            .optimize = mode,
+        });
+        exe.addCSourceFiles(common_src, &[_][]const u8{});
         exe.step.dependOn(&libc_test_repo.step);
         exe.addIncludePath(libc_inc_path);
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
@@ -310,22 +316,24 @@ fn addTinyRegexCTests(
     });
 
     const re_step = b.step("re-tests", "run the tiny-regex-c tests");
-    inline for (&[_][]const u8 { "test1", "test3" }) |test_name| {
-        const exe = b.addExecutable("re" ++ test_name, null);
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
+    inline for (&[_][]const u8{ "test1", "test3" }) |test_name| {
+        const exe = b.addExecutable(.{
+            .name = "re" ++ test_name,
+            .target = target,
+            .optimize = mode,
+        });
         //exe.install();
         exe.step.dependOn(&repo.step);
         const repo_path = repo.getPath(&exe.step);
         var files = std.ArrayList([]const u8).init(b.allocator);
-        const sources = [_][]const u8 {
+        const sources = [_][]const u8{
             "re.c", "tests" ++ std.fs.path.sep_str ++ test_name ++ ".c",
         };
         for (sources) |src| {
-            files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+            files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
         }
 
-        exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+        exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
             "-std=c99",
         });
         exe.addIncludePath(repo_path);
@@ -361,9 +369,11 @@ fn addLua(
         .sha = "5d708c3f9cae12820e415d4f89c9eacbe2ab964b",
         .branch = "v5.4.4",
     });
-    const lua_exe = b.addExecutable("lua", null);
-    lua_exe.setTarget(target);
-    lua_exe.setBuildMode(mode);
+    const lua_exe = b.addExecutable(.{
+        .name = "lua",
+        .target = target,
+        .optimize = mode,
+    });
     lua_exe.step.dependOn(&lua_repo.step);
     lua_exe.install();
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
@@ -426,30 +436,31 @@ fn addCmph(
     });
 
     const config_step = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "src", "config.h"}),
+        b.pathJoin(&.{ repo.path, "src", "config.h" }),
         "#define VERSION \"1.0\"",
     );
     config_step.step.dependOn(&repo.step);
 
-    const exe = b.addExecutable("cmph", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "cmph",
+        .target = target,
+        .optimize = mode,
+    });
     exe.install();
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
-        "main.c", "cmph.c", "hash.c", "chm.c", "bmz.c", "bmz8.c", "brz.c", "fch.c",
-        "bdz.c", "bdz_ph.c", "chd_ph.c", "chd.c", "jenkins_hash.c", "graph.c", "vqueue.c",
-        "buffer_manager.c", "fch_buckets.c", "miller_rabin.c", "compressed_seq.c",
-        "compressed_rank.c", "buffer_entry.c", "select.c", "cmph_structs.c",
+    const sources = [_][]const u8{
+        "main.c",        "cmph.c",         "hash.c",           "chm.c",             "bmz.c",          "bmz8.c",   "brz.c",          "fch.c",
+        "bdz.c",         "bdz_ph.c",       "chd_ph.c",         "chd.c",             "jenkins_hash.c", "graph.c",  "vqueue.c",       "buffer_manager.c",
+        "fch_buckets.c", "miller_rabin.c", "compressed_seq.c", "compressed_rank.c", "buffer_entry.c", "select.c", "cmph_structs.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, "src", src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, "src", src })) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c11",
     });
 
@@ -485,8 +496,7 @@ fn addYacc(
         .branch = null,
     });
 
-    const config_step = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "config.h"}),
+    const config_step = b.addWriteFile(b.pathJoin(&.{ repo.path, "config.h" }),
         \\// for simplicity just don't supported __unused
         \\#define __unused
         \\// for simplicity we're just not supporting noreturn
@@ -499,32 +509,33 @@ fn addYacc(
         \\
     );
     config_step.step.dependOn(&repo.step);
-    const gen_progname_step = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "progname.c"}),
+    const gen_progname_step = b.addWriteFile(b.pathJoin(&.{ repo.path, "progname.c" }),
         \\// workaround __progname not defined, https://github.com/ibara/yacc/pull/1
         \\char *__progname;
         \\
     );
     gen_progname_step.step.dependOn(&repo.step);
 
-    const exe = b.addExecutable("yacc", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "yacc",
+        .target = target,
+        .optimize = mode,
+    });
     exe.install();
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
     exe.step.dependOn(&gen_progname_step.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
-        "closure.c", "error.c", "lalr.c", "lr0.c", "main.c", "mkpar.c", "output.c", "reader.c",
+    const sources = [_][]const u8{
+        "closure.c",  "error.c",  "lalr.c",    "lr0.c",      "main.c",     "mkpar.c",    "output.c", "reader.c",
         "skeleton.c", "symtab.c", "verbose.c", "warshall.c", "portable.c", "progname.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c90",
     });
 
@@ -560,20 +571,22 @@ fn addYabfc(
         .branch = null,
     });
 
-    const exe = b.addExecutable("yabfc", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "yabfc",
+        .target = target,
+        .optimize = mode,
+    });
     exe.install();
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
+    const sources = [_][]const u8{
         "assembly.c", "elfHelper.c", "helpers.c", "optimize.c", "yabfc.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
     });
 
@@ -612,21 +625,23 @@ fn addSecretGame(
         .branch = null,
     });
 
-    const exe = b.addExecutable("secret", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "secret",
+        .target = target,
+        .optimize = mode,
+    });
     //exe.install();
     _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
+    const sources = [_][]const u8{
         "main.c", "inter.c", "input.c", "items.c", "rooms.c", "linenoise/linenoise.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c90",
     });
 

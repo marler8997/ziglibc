@@ -20,11 +20,17 @@ pub const ZigLibcOptions = struct {
     start: Start,
     trace: bool,
     target: std.zig.CrossTarget,
+    optimize: std.builtin.Mode,
 };
 
 /// Provides a _start symbol that will call C main
-pub fn addZigStart(builder: *std.build.Builder) *std.build.LibExeObjStep {
-    const lib = builder.addStaticLibrary("start", "src" ++ std.fs.path.sep_str ++ "start.zig");
+pub fn addZigStart(builder: *std.Build.Builder, target: std.zig.CrossTarget, optimize: std.builtin.Mode) *std.build.LibExeObjStep {
+    const lib = builder.addStaticLibrary(.{
+        .name = "start",
+        .root_source_file = .{ .path = "src" ++ std.fs.path.sep_str ++ "start.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;
@@ -41,28 +47,41 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
         .only_gnu => "c-only-gnu",
         //.full => "c",
         .full => "cguana", // use cguana to avoid passing in '-lc' to zig which will
-                           // cause it to add the system libc headers
+        // cause it to add the system libc headers
     };
     const trace_options = builder.addOptions();
     trace_options.addOption(bool, "enabled", opt.trace);
 
     const modules_options = builder.addOptions();
-    modules_options.addOption(bool, "glibcstart", switch (opt.start) { .glibc => true, else => false });
+    modules_options.addOption(bool, "glibcstart", switch (opt.start) {
+        .glibc => true,
+        else => false,
+    });
     const index = "src" ++ std.fs.path.sep_str ++ "lib.zig";
     const lib = switch (opt.link) {
-        .static => builder.addStaticLibrary(name, index),
-        .shared => builder.addSharedLibrary(name, index, switch (opt.variant) {
-            .full => .{ .versioned = .{ .major = 6, .minor = 0 } },
-            else => .unversioned,
+        .static => builder.addStaticLibrary(.{
+            .name = name,
+            .root_source_file = .{ .path = index },
+            .target = opt.target,
+            .optimize = opt.optimize,
+        }),
+        .shared => builder.addSharedLibrary(.{
+            .name = name,
+            .root_source_file = .{ .path = index },
+            .target = opt.target,
+            .optimize = opt.optimize,
+            .version = switch (opt.variant) {
+                .full => .{ .major = 6, .minor = 0 },
+                else => null,
+            },
         }),
     };
-    lib.setTarget(opt.target);
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;
     lib.addOptions("modules", modules_options);
     lib.addOptions("trace_options", trace_options);
-    const c_flags = [_][]const u8 {
+    const c_flags = [_][]const u8{
         "-std=c11",
     };
     const include_cstd = switch (opt.variant) {

@@ -19,9 +19,8 @@ pub fn addGnuMake(
     config_step.* = std.build.Step.initNoOp(.custom, "configure GNU Make", b.allocator);
     // note: this MUST be the first dependency
     config_step.dependOn(&repo.step);
-    
-    const gen_config_h = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "src", "config.h"}),
+
+    const gen_config_h = b.addWriteFile(b.pathJoin(&.{ repo.path, "src", "config.h" }),
         \\/* Name of package */
         \\#define PACKAGE "GNUMake"
         \\/* Define to the address where bug reports for this package should be sent. */
@@ -54,20 +53,22 @@ pub fn addGnuMake(
         \\
         \\#define FILE_TIMESTAMP_HI_RES 0
         \\/* not sure what this is, but default.c seems to need it */
-            \\#define SCCS_GET "get"
+        \\#define SCCS_GET "get"
         \\
     );
     //\\#define __ptr_t char *
     //\\#define HAVE_GETOPT_H 1
     //\\#define HAVE_ALLOCA 1
     config_step.dependOn(&gen_config_h.step);
-// gcc -DHAVE_CONFIG_H   -Isrc -I./src -Ilib -I./lib -DLIBDIR=\"/usr/local/lib\" -DLOCALEDIR=\"/usr/local/share/locale\"   -DMAKE_MAINTAINER_MODE   -C -Wall -Wextra -Werror -Wwrite-strings -Wshadow -Wdeclaration-after-statement -Wbad-function-cast -Wformat-security -Wtype-limits -Wunused-but-set-parameter -Wlogical-op -Wpointer-arith -Wignored-qualifiers -Wformat-signedness -Wduplicated-cond -g -O2 -MT src/hash.o -MD -MP -MF $depbase.Tpo -c -o src/hash.o src/hash.c &&\    
+    // gcc -DHAVE_CONFIG_H   -Isrc -I./src -Ilib -I./lib -DLIBDIR=\"/usr/local/lib\" -DLOCALEDIR=\"/usr/local/share/locale\"   -DMAKE_MAINTAINER_MODE   -C -Wall -Wextra -Werror -Wwrite-strings -Wshadow -Wdeclaration-after-statement -Wbad-function-cast -Wformat-security -Wtype-limits -Wunused-but-set-parameter -Wlogical-op -Wpointer-arith -Wignored-qualifiers -Wformat-signedness -Wduplicated-cond -g -O2 -MT src/hash.o -MD -MP -MF $depbase.Tpo -c -o src/hash.o src/hash.c &&\
 
-// home/marler8997/zig/0.11.0-dev.12+ebf9ffd34/files/zig build-exe -cflags -std=c11 -- /home/marler8997/git/ziglibc/dep/make.git/src/ar.c /home/marler8997/git/ziglibc/dep/make.git/src/arscan.c /home/marler8997/git/ziglibc/dep/make.git/src/commands.c /home/marler8997/git/ziglibc/dep/make.git/src/default.c /home/marler8997/git/ziglibc/dep/make.git/src/dir.c /home/marler8997/git/ziglibc/dep/make.git/src/expand.c /home/marler8997/git/ziglibc/dep/make.git/src/file.c /home/marler8997/git/ziglibc/dep/make.git/src/function.c /home/marler8997/git/ziglibc/dep/make.git/src/getopt.c /home/marler8997/git/ziglibc/dep/make.git/src/getopt1.c /home/marler8997/git/ziglibc/dep/make.git/src/guile.c /home/marler8997/git/ziglibc/dep/make.git/src/hash.c /home/marler8997/git/ziglibc/dep/make.git/src/implicit.c /home/marler8997/git/ziglibc/dep/make.git/src/job.c /home/marler8997/git/ziglibc/dep/make.git/src/load.c /home/marler8997/git/ziglibc/dep/make.git/src/loadapi.c /home/marler8997/git/ziglibc/dep/make.git/src/main.c /home/marler8997/git/ziglibc/dep/make.git/src/misc.c /home/marler8997/git/ziglibc/dep/make.git/src/output.c /home/marler8997/git/ziglibc/dep/make.git/src/read.c /home/marler8997/git/ziglibc/dep/make.git/src/remake.c /home/marler8997/git/ziglibc/dep/make.git/src/rule.c /home/marler8997/git/ziglibc/dep/make.git/src/shuffle.c /home/marler8997/git/ziglibc/dep/make.git/src/signame.c /home/marler8997/git/ziglibc/dep/make.git/src/strcache.c /home/marler8997/git/ziglibc/dep/make.git/src/variable.c /home/marler8997/git/ziglibc/dep/make.git/src/version.c /home/marler8997/git/ziglibc/dep/make.git/src/vpath.c /home/marler8997/git/ziglibc/dep/make.git/src/posixos.c /home/marler8997/git/ziglibc/dep/make.git/src/remote-stub.c /home/marler8997/git/ziglibc/zig-cache/o/b2ab2b27dd98ed5352486d2081cf35bf/libc-only-std.a /home/marler8997/git/ziglibc/zig-cache/o/4d76e73699236d8f95a7f75ae51db269/libc-only-posix.a /home/marler8997/git/ziglibc/zig-cache/o/f647e7cbfedb41adc3d86981e126be58/libstart.a --verbose-cc --cache-dir /home/marler8997/git/ziglibc/zig-cache --global-cache-dir /home/marler8997/.cache/zig --name make -I /home/marler8997/git/ziglibc/inc/libc -I /home/marler8997/git/ziglibc/inc/posix -I /home/marler8997/git/ziglibc/inc/gnu --enable-cache 
-    
-    const exe = b.addExecutable("make", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    // home/marler8997/zig/0.11.0-dev.12+ebf9ffd34/files/zig build-exe -cflags -std=c11 -- /home/marler8997/git/ziglibc/dep/make.git/src/ar.c /home/marler8997/git/ziglibc/dep/make.git/src/arscan.c /home/marler8997/git/ziglibc/dep/make.git/src/commands.c /home/marler8997/git/ziglibc/dep/make.git/src/default.c /home/marler8997/git/ziglibc/dep/make.git/src/dir.c /home/marler8997/git/ziglibc/dep/make.git/src/expand.c /home/marler8997/git/ziglibc/dep/make.git/src/file.c /home/marler8997/git/ziglibc/dep/make.git/src/function.c /home/marler8997/git/ziglibc/dep/make.git/src/getopt.c /home/marler8997/git/ziglibc/dep/make.git/src/getopt1.c /home/marler8997/git/ziglibc/dep/make.git/src/guile.c /home/marler8997/git/ziglibc/dep/make.git/src/hash.c /home/marler8997/git/ziglibc/dep/make.git/src/implicit.c /home/marler8997/git/ziglibc/dep/make.git/src/job.c /home/marler8997/git/ziglibc/dep/make.git/src/load.c /home/marler8997/git/ziglibc/dep/make.git/src/loadapi.c /home/marler8997/git/ziglibc/dep/make.git/src/main.c /home/marler8997/git/ziglibc/dep/make.git/src/misc.c /home/marler8997/git/ziglibc/dep/make.git/src/output.c /home/marler8997/git/ziglibc/dep/make.git/src/read.c /home/marler8997/git/ziglibc/dep/make.git/src/remake.c /home/marler8997/git/ziglibc/dep/make.git/src/rule.c /home/marler8997/git/ziglibc/dep/make.git/src/shuffle.c /home/marler8997/git/ziglibc/dep/make.git/src/signame.c /home/marler8997/git/ziglibc/dep/make.git/src/strcache.c /home/marler8997/git/ziglibc/dep/make.git/src/variable.c /home/marler8997/git/ziglibc/dep/make.git/src/version.c /home/marler8997/git/ziglibc/dep/make.git/src/vpath.c /home/marler8997/git/ziglibc/dep/make.git/src/posixos.c /home/marler8997/git/ziglibc/dep/make.git/src/remote-stub.c /home/marler8997/git/ziglibc/zig-cache/o/b2ab2b27dd98ed5352486d2081cf35bf/libc-only-std.a /home/marler8997/git/ziglibc/zig-cache/o/4d76e73699236d8f95a7f75ae51db269/libc-only-posix.a /home/marler8997/git/ziglibc/zig-cache/o/f647e7cbfedb41adc3d86981e126be58/libstart.a --verbose-cc --cache-dir /home/marler8997/git/ziglibc/zig-cache --global-cache-dir /home/marler8997/.cache/zig --name make -I /home/marler8997/git/ziglibc/inc/libc -I /home/marler8997/git/ziglibc/inc/posix -I /home/marler8997/git/ziglibc/inc/gnu --enable-cache
+
+    const exe = b.addExecutable(.{
+        .name = "make",
+        .target = target,
+        .optimize = mode,
+    });
     _ = b.addInstallArtifact(exe);
     //exe.install();
     exe.step.dependOn(&repo.step);
@@ -75,16 +76,25 @@ pub fn addGnuMake(
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
     for (src_filenames) |src| {
-        files.append(b.pathJoin(&.{repo_path, "src", src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, "src", src })) catch unreachable;
     }
 
-    exe.addIncludePath(b.pathJoin(&.{repo_path, "src"}));
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addIncludePath(b.pathJoin(&.{ repo_path, "src" }));
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
         "-DHAVE_CONFIG_H",
-        "-Wall", "-Wextra", "-Werror", "-Wwrite-strings", "-Wshadow", "-Wdeclaration-after-statement",
-        "-Wbad-function-cast", "-Wformat-security", "-Wtype-limits", "-Wunused-but-set-parameter",
-        "-Wpointer-arith", "-Wignored-qualifiers",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wwrite-strings",
+        "-Wshadow",
+        "-Wdeclaration-after-statement",
+        "-Wbad-function-cast",
+        "-Wformat-security",
+        "-Wtype-limits",
+        "-Wunused-but-set-parameter",
+        "-Wpointer-arith",
+        "-Wignored-qualifiers",
         // ignore unused parameter errors because the ATTRIBUTE define isn't working in makeint.h
         "-Wno-unused-parameter",
         "-Wno-dangling-else",
@@ -110,7 +120,7 @@ pub fn addGnuMake(
     return exe;
 }
 
-const src_filenames = &[_][]const u8 {
+const src_filenames = &[_][]const u8{
     "ar.c",
     "arscan.c",
     "commands.c",
