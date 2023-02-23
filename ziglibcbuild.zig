@@ -41,7 +41,7 @@ pub fn addZigStart(builder: *std.Build.Builder, target: std.zig.CrossTarget, opt
 // Caller will also need to add the include path to get the C headers
 pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibExeObjStep {
     const name = switch (opt.variant) {
-        .only_std => "c-only-std",
+        .only_std => if (opt.link == .static) "c-only-std-static" else "c-only-std",
         .only_posix => "c-only-posix",
         .only_linux => "c-only-linux",
         .only_gnu => "c-only-gnu",
