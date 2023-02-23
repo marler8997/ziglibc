@@ -76,6 +76,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
             },
         }),
     };
+    lib.installHeadersDirectory("inc/libc", "include");
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;
