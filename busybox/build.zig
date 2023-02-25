@@ -20,7 +20,7 @@ const BusyboxPrepStep = struct {
         const b = self.builder;
 
         std.log.warn("TODO: check config file timestamp to prevent unnecessary copy", .{});
-        var src_dir = try std.fs.cwd().openDir(b.pathJoin(&.{ b.build_root, "busybox"}), .{});
+        var src_dir = try std.fs.cwd().openDir(b.pathJoin(&.{ b.build_root.path.?, "busybox" }), .{});
         defer src_dir.close();
         var dst_dir = try std.fs.cwd().openDir(self.repo_path, .{});
         defer dst_dir.close();
@@ -42,25 +42,27 @@ pub fn add(
     });
 
     const prep = BusyboxPrepStep.create(b, repo);
-    
-    const exe = b.addExecutable("busybox", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+
+    const exe = b.addExecutable(.{
+        .name = "busybox",
+        .target = target,
+        .optimize = mode,
+    });
     //exe.install();
     _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&prep.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
+    const sources = [_][]const u8{
         "editors/sed.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
     });
-    exe.addIncludePath(b.pathJoin(&.{repo_path, "include"}));
+    exe.addIncludePath(b.pathJoin(&.{ repo_path, "include" }));
 
     exe.addIncludePath("inc/libc");
     exe.addIncludePath("inc/posix");
