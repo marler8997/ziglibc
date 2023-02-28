@@ -57,8 +57,7 @@ pub fn create(b: *std.build.Builder, opt: struct {
         .branch = opt.branch,
         .sha = opt.sha,
         .path = if (opt.path) |p| (b.allocator.dupe(u8, p) catch @panic("memory")) else (std.fs.path.resolve(b.allocator, &[_][]const u8{
-            b.build_root,
-            "dep",
+            b.pathFromRoot("dep"),
             name,
         })) catch @panic("memory"),
         .sha_check = opt.sha_check,
@@ -183,7 +182,7 @@ fn run(builder: *std.build.Builder, argv: []const []const u8) !void {
     child.stdin_behavior = .Ignore;
     child.stdout_behavior = .Inherit;
     child.stderr_behavior = .Inherit;
-    child.cwd = builder.build_root;
+    child.cwd = builder.pathFromRoot(".");
     child.env_map = builder.env_map;
 
     try child.spawn();
