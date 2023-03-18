@@ -4,7 +4,7 @@ const GitRepoStep = @import("GitRepoStep.zig");
 pub fn addGnuMake(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -65,9 +65,11 @@ pub fn addGnuMake(
 
 // home/marler8997/zig/0.11.0-dev.12+ebf9ffd34/files/zig build-exe -cflags -std=c11 -- /home/marler8997/git/ziglibc/dep/make.git/src/ar.c /home/marler8997/git/ziglibc/dep/make.git/src/arscan.c /home/marler8997/git/ziglibc/dep/make.git/src/commands.c /home/marler8997/git/ziglibc/dep/make.git/src/default.c /home/marler8997/git/ziglibc/dep/make.git/src/dir.c /home/marler8997/git/ziglibc/dep/make.git/src/expand.c /home/marler8997/git/ziglibc/dep/make.git/src/file.c /home/marler8997/git/ziglibc/dep/make.git/src/function.c /home/marler8997/git/ziglibc/dep/make.git/src/getopt.c /home/marler8997/git/ziglibc/dep/make.git/src/getopt1.c /home/marler8997/git/ziglibc/dep/make.git/src/guile.c /home/marler8997/git/ziglibc/dep/make.git/src/hash.c /home/marler8997/git/ziglibc/dep/make.git/src/implicit.c /home/marler8997/git/ziglibc/dep/make.git/src/job.c /home/marler8997/git/ziglibc/dep/make.git/src/load.c /home/marler8997/git/ziglibc/dep/make.git/src/loadapi.c /home/marler8997/git/ziglibc/dep/make.git/src/main.c /home/marler8997/git/ziglibc/dep/make.git/src/misc.c /home/marler8997/git/ziglibc/dep/make.git/src/output.c /home/marler8997/git/ziglibc/dep/make.git/src/read.c /home/marler8997/git/ziglibc/dep/make.git/src/remake.c /home/marler8997/git/ziglibc/dep/make.git/src/rule.c /home/marler8997/git/ziglibc/dep/make.git/src/shuffle.c /home/marler8997/git/ziglibc/dep/make.git/src/signame.c /home/marler8997/git/ziglibc/dep/make.git/src/strcache.c /home/marler8997/git/ziglibc/dep/make.git/src/variable.c /home/marler8997/git/ziglibc/dep/make.git/src/version.c /home/marler8997/git/ziglibc/dep/make.git/src/vpath.c /home/marler8997/git/ziglibc/dep/make.git/src/posixos.c /home/marler8997/git/ziglibc/dep/make.git/src/remote-stub.c /home/marler8997/git/ziglibc/zig-cache/o/b2ab2b27dd98ed5352486d2081cf35bf/libc-only-std.a /home/marler8997/git/ziglibc/zig-cache/o/4d76e73699236d8f95a7f75ae51db269/libc-only-posix.a /home/marler8997/git/ziglibc/zig-cache/o/f647e7cbfedb41adc3d86981e126be58/libstart.a --verbose-cc --cache-dir /home/marler8997/git/ziglibc/zig-cache --global-cache-dir /home/marler8997/.cache/zig --name make -I /home/marler8997/git/ziglibc/inc/libc -I /home/marler8997/git/ziglibc/inc/posix -I /home/marler8997/git/ziglibc/inc/gnu --enable-cache 
     
-    const exe = b.addExecutable("make", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "make",
+        .target = target,
+        .optimize = optimize,
+    });
     _ = b.addInstallArtifact(exe);
     //exe.install();
     exe.step.dependOn(&repo.step);

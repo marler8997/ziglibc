@@ -4,7 +4,7 @@ const GitRepoStep = @import("GitRepoStep.zig");
 pub fn addAwk(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -21,9 +21,11 @@ pub fn addAwk(
 //    );
 //    config_step.step.dependOn(&repo.step);
 
-    const exe = b.addExecutable("awk", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "awk",
+        .target = target,
+        .optimize = optimize,
+    });
     _ = b.addInstallArtifact(exe);
     //exe.install();
     exe.step.dependOn(&repo.step);

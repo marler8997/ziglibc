@@ -20,11 +20,21 @@ pub const ZigLibcOptions = struct {
     start: Start,
     trace: bool,
     target: std.zig.CrossTarget,
+    optimize: std.builtin.Mode,
 };
 
 /// Provides a _start symbol that will call C main
-pub fn addZigStart(builder: *std.build.Builder) *std.build.LibExeObjStep {
-    const lib = builder.addStaticLibrary("start", "src" ++ std.fs.path.sep_str ++ "start.zig");
+pub fn addZigStart(
+    builder: *std.build.Builder,
+    target: std.zig.CrossTarget,
+    optimize: anytype,
+) *std.build.LibExeObjStep {
+    const lib = builder.addStaticLibrary(.{
+        .name = "start",
+        .root_source_file = .{ .path = "src" ++ std.fs.path.sep_str ++ "start.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;
@@ -50,13 +60,23 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     modules_options.addOption(bool, "glibcstart", switch (opt.start) { .glibc => true, else => false });
     const index = "src" ++ std.fs.path.sep_str ++ "lib.zig";
     const lib = switch (opt.link) {
-        .static => builder.addStaticLibrary(name, index),
-        .shared => builder.addSharedLibrary(name, index, switch (opt.variant) {
-            .full => .{ .versioned = .{ .major = 6, .minor = 0 } },
-            else => .unversioned,
+        .static => builder.addStaticLibrary(.{
+            .name = name,
+            .root_source_file = .{ .path = index },
+            .target = opt.target,
+            .optimize = opt.optimize,
+        }),
+        .shared => builder.addSharedLibrary(.{
+            .name = name,
+            .root_source_file = .{ .path = index },
+            .target = opt.target,
+            .optimize = opt.optimize,
+            .version = switch (opt.variant) {
+                .full => .{ .major = 6, .minor = 0 },
+                else => null,
+            },
         }),
     };
-    lib.setTarget(opt.target);
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;

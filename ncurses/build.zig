@@ -102,7 +102,7 @@ fn addProcessFile(
 pub fn add(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
@@ -114,7 +114,11 @@ pub fn add(
 
     const prep = NcursesPrepStep.create(b, repo);
 
-    const exe = b.addStaticLibrary("ncurses", null);
+    const exe = b.addStaticLibrary(.{
+        .name = "ncurses",
+        .target = target,
+        .optimize = optimize,
+    });
     addProcessFile(b, repo, exe,
         b.pathJoin(&.{"include", "ncurses_dll.h.in"}),
         b.pathJoin(&.{"include", "ncurses_dll.h"}),
@@ -135,8 +139,6 @@ pub fn add(
     //    b.pathJoin(&.{"include", "curses.head"}),
     //   .{ .subs = &.{ defs_sub } },
     //);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
     //exe.install();
     _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&prep.step);

@@ -9,18 +9,19 @@ pub fn build(b: *std.build.Builder) void {
     const trace_enabled = b.option(bool, "trace", "enable libc tracing") orelse false;
 
     {
-        const exe = b.addExecutable("genheaders", "src" ++ std.fs.path.sep_str ++ "genheaders.zig");
+        const exe = b.addExecutable(.{
+            .name = "genheaders",
+            .root_source_file = .{ .path = "src" ++ std.fs.path.sep_str ++ "genheaders.zig" },
+        });
         const run = exe.run();
         run.addArg(b.pathFromRoot("capi.txt"));
         b.step("genheaders", "Generate C Headers").dependOn(&run.step);
     }
 
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
-    const zig_start = libcbuild.addZigStart(b);
-    zig_start.setTarget(target);
-    zig_start.setBuildMode(mode);
+    const zig_start = libcbuild.addZigStart(b, target, optimize);
     zig_start.install();
     b.step("start", "").dependOn(&zig_start.install_step.?.step);
 
@@ -30,9 +31,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_full_static.setTarget(target);
-    libc_full_static.setBuildMode(mode);
     libc_full_static.install();
     const libc_full_shared = libcbuild.addLibc(b, .{
         .variant = .full,
@@ -40,9 +40,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_full_shared.setTarget(target);
-    libc_full_shared.setBuildMode(mode);
     libc_full_shared.install();
     b.step("libc-full-shared", "").dependOn(&libc_full_shared.install_step.?.step);
     // TODO: create a specs file?
@@ -54,9 +53,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_only_std_static.setTarget(target);
-    libc_only_std_static.setBuildMode(mode);
     libc_only_std_static.install();
     const libc_only_std_shared = libcbuild.addLibc(b, .{
         .variant = .only_std,
@@ -64,9 +62,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_only_std_shared.setTarget(target);
-    libc_only_std_shared.setBuildMode(mode);
     libc_only_std_shared.install();
 
     const libc_only_posix = libcbuild.addLibc(b, .{
@@ -75,9 +72,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_only_posix.setTarget(target);
-    libc_only_posix.setBuildMode(mode);
     libc_only_posix.install();
 
     const libc_only_linux = libcbuild.addLibc(b, .{
@@ -86,9 +82,8 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_only_linux.setTarget(target);
-    libc_only_linux.setBuildMode(mode);
     libc_only_linux.install();
 
     const libc_only_gnu = libcbuild.addLibc(b, .{
@@ -97,19 +92,21 @@ pub fn build(b: *std.build.Builder) void {
         .start = .ziglibc,
         .trace = trace_enabled,
         .target = target,
+        .optimize = optimize,
     });
-    libc_only_gnu.setTarget(target);
-    libc_only_gnu.setBuildMode(mode);
     libc_only_gnu.install();
 
     const test_step = b.step("test", "Run unit tests");
 
-    const test_env_exe = b.addExecutable("testenv", "test" ++ std.fs.path.sep_str ++ "testenv.zig");
-    test_env_exe.setTarget(target);
-    test_env_exe.setBuildMode(mode);
+    const test_env_exe = b.addExecutable(.{
+        .name = "testenv",
+        .root_source_file = .{ .path = "test" ++ std.fs.path.sep_str ++ "testenv.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
 
     {
-        const exe = addTest("hello", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("hello", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Hello\n",
@@ -117,7 +114,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("strings", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("strings", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
@@ -125,7 +122,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("fs", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("fs", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
         run_step.stdout_action = .{
@@ -134,7 +131,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("format", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("format", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
         run_step.stdout_action = .{
@@ -143,7 +140,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("types", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("types", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.addArg(b.fmt("{}", .{@divExact(target.toTarget().cpu.arch.ptrBitWidth(), 8)}));
         run_step.stdout_action = .{
@@ -152,7 +149,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("scanf", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("scanf", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
@@ -160,7 +157,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("strto", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("strto", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
@@ -168,7 +165,7 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
     {
-        const exe = addTest("getopt", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("getopt", b, target, optimize, libc_only_std_static, zig_start);
         addPosix(exe, libc_only_posix);
         {
             const run = exe.run();
@@ -191,7 +188,7 @@ pub fn build(b: *std.build.Builder) void {
 
     // this test only works on linux right now
     if (target.getOsTag() == .linux) {
-        const exe = addTest("jmp", b, target, mode, libc_only_std_static, zig_start);
+        const exe = addTest("jmp", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.stdout_action = .{
             .expect_exact = "Success!\n",
@@ -199,18 +196,18 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_step.step);
     }
 
-    addLibcTest(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
-    addTinyRegexCTests(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
-    _ = addLua(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
-    _ = addCmph(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
-    _ = addYacc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix);
-    _ = addYabfc(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
-    _ = addSecretGame(b, target, mode, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
-    _ = awkbuild.addAwk(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
-    _ = gnumakebuild.addGnuMake(b, target, mode, libc_only_std_static, libc_only_posix, zig_start);
+    addLibcTest(b, target, optimize, libc_only_std_static, zig_start, libc_only_posix);
+    addTinyRegexCTests(b, target, optimize, libc_only_std_static, zig_start, libc_only_posix);
+    _ = addLua(b, target, optimize, libc_only_std_static, libc_only_posix, zig_start);
+    _ = addCmph(b, target, optimize, libc_only_std_static, zig_start, libc_only_posix);
+    _ = addYacc(b, target, optimize, libc_only_std_static, zig_start, libc_only_posix);
+    _ = addYabfc(b, target, optimize, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
+    _ = addSecretGame(b, target, optimize, libc_only_std_static, zig_start, libc_only_posix, libc_only_gnu);
+    _ = awkbuild.addAwk(b, target, optimize, libc_only_std_static, libc_only_posix, zig_start);
+    _ = gnumakebuild.addGnuMake(b, target, optimize, libc_only_std_static, libc_only_posix, zig_start);
 
-    _ = @import("busybox/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
-    _ = @import("ncurses/build.zig").add(b, target, mode, libc_only_std_static, libc_only_posix);
+    _ = @import("busybox/build.zig").add(b, target, optimize, libc_only_std_static, libc_only_posix);
+    _ = @import("ncurses/build.zig").add(b, target, optimize, libc_only_std_static, libc_only_posix);
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
@@ -222,18 +219,21 @@ fn addTest(
     comptime name: []const u8,
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
-    const exe = b.addExecutable(name, "test" ++ std.fs.path.sep_str ++ name ++ ".c");
+    const exe = b.addExecutable(.{
+        .name = name,
+        .root_source_file = .{ .path = "test" ++ std.fs.path.sep_str ++ name ++ ".c" },
+        .target = target,
+        .optimize = optimize,
+    });
     exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8 { });
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
     if (target.getOs().tag == .windows) {
         exe.linkSystemLibrary("ntdll");
@@ -245,7 +245,7 @@ fn addTest(
 fn addLibcTest(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     libc_only_posix: *std.build.LibExeObjStep,
@@ -260,9 +260,12 @@ fn addLibcTest(
 
     // inttypes
     inline for (.{ "assert", "ctype", "errno", "main", "stdbool", "stddef", "string" } ) |name| {
-        const lib = b.addObject("libc-test-api-" ++ name, b.pathJoin(&.{libc_test_path, "src", "api", name ++ ".c"}));
-        lib.setTarget(target);
-        lib.setBuildMode(mode);
+        const lib = b.addObject(.{
+            .name = "libc-test-api-" ++ name,
+            .root_source_file = .{ .path = b.pathJoin(&.{libc_test_path, "src", "api", name ++ ".c"}) },
+            .target = target,
+            .optimize = optimize,
+        });
         lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
         lib.step.dependOn(&libc_test_repo.step);
         libc_test_step.dependOn(&lib.step);
@@ -275,10 +278,13 @@ fn addLibcTest(
     // strtol, it seems there might be some disagreement between libc-test/glibc
     // about how strtoul interprets negative numbers, so leaving out strtol for now
     inline for (.{ "argv", "basename", "clock_gettime", "string" } ) |name| {
-        const exe = b.addExecutable("libc-test-functional-" ++ name, b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}));
+        const exe = b.addExecutable(.{
+            .name = "libc-test-functional-" ++ name,
+            .root_source_file = .{ .path = b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}) },
+            .target = target,
+            .optimize = optimize,
+        });
         exe.addCSourceFiles(common_src, &[_][]const u8 {});
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
         exe.step.dependOn(&libc_test_repo.step);
         exe.addIncludePath(libc_inc_path);
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
@@ -298,7 +304,7 @@ fn addLibcTest(
 fn addTinyRegexCTests(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -311,9 +317,12 @@ fn addTinyRegexCTests(
 
     const re_step = b.step("re-tests", "run the tiny-regex-c tests");
     inline for (&[_][]const u8 { "test1", "test3" }) |test_name| {
-        const exe = b.addExecutable("re" ++ test_name, null);
-        exe.setTarget(target);
-        exe.setBuildMode(mode);
+        const exe = b.addExecutable(.{
+            .name = "re" ++ test_name,
+            .root_source_file = null,
+            .target = target,
+            .optimize = optimize,
+        });
         //exe.install();
         exe.step.dependOn(&repo.step);
         const repo_path = repo.getPath(&exe.step);
@@ -351,7 +360,7 @@ fn addTinyRegexCTests(
 fn addLua(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     libc_only_posix: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
@@ -361,9 +370,11 @@ fn addLua(
         .sha = "5d708c3f9cae12820e415d4f89c9eacbe2ab964b",
         .branch = "v5.4.4",
     });
-    const lua_exe = b.addExecutable("lua", null);
-    lua_exe.setTarget(target);
-    lua_exe.setBuildMode(mode);
+    const lua_exe = b.addExecutable(.{
+        .name = "lua",
+        .target = target,
+        .optimize = optimize,
+    });
     lua_exe.step.dependOn(&lua_repo.step);
     lua_exe.install();
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
@@ -413,7 +424,7 @@ fn addLua(
 fn addCmph(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -431,9 +442,11 @@ fn addCmph(
     );
     config_step.step.dependOn(&repo.step);
 
-    const exe = b.addExecutable("cmph", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "cmph",
+        .target = target,
+        .optimize = optimize,
+    });
     exe.install();
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
@@ -474,7 +487,7 @@ fn addCmph(
 fn addYacc(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -507,9 +520,11 @@ fn addYacc(
     );
     gen_progname_step.step.dependOn(&repo.step);
 
-    const exe = b.addExecutable("yacc", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "yacc",
+        .target = target,
+        .optimize = optimize,
+    });
     exe.install();
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
@@ -548,7 +563,7 @@ fn addYacc(
 fn addYabfc(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -560,9 +575,11 @@ fn addYabfc(
         .branch = null,
     });
 
-    const exe = b.addExecutable("yabfc", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "yabfc",
+        .target = target,
+        .optimize = optimize,
+    });
     exe.install();
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
@@ -600,7 +617,7 @@ fn addYabfc(
 fn addSecretGame(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_start: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
@@ -612,9 +629,11 @@ fn addSecretGame(
         .branch = null,
     });
 
-    const exe = b.addExecutable("secret", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "secret",
+        .target = target,
+        .optimize = optimize,
+    });
     //exe.install();
     _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);

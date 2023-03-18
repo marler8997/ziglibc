@@ -20,7 +20,7 @@ const BusyboxPrepStep = struct {
         const b = self.builder;
 
         std.log.warn("TODO: check config file timestamp to prevent unnecessary copy", .{});
-        var src_dir = try std.fs.cwd().openDir(b.pathJoin(&.{ b.build_root, "busybox"}), .{});
+        var src_dir = try std.fs.cwd().openDir(b.pathJoin(&.{ b.build_root.path.?, "busybox"}), .{});
         defer src_dir.close();
         var dst_dir = try std.fs.cwd().openDir(self.repo_path, .{});
         defer dst_dir.close();
@@ -31,7 +31,7 @@ const BusyboxPrepStep = struct {
 pub fn add(
     b: *std.build.Builder,
     target: anytype,
-    mode: anytype,
+    optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
 ) *std.build.LibExeObjStep {
@@ -43,9 +43,11 @@ pub fn add(
 
     const prep = BusyboxPrepStep.create(b, repo);
     
-    const exe = b.addExecutable("busybox", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "busybox",
+        .target = target,
+        .optimize = optimize,
+    });
     //exe.install();
     _ = b.addInstallArtifact(exe);
     exe.step.dependOn(&prep.step);
