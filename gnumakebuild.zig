@@ -16,7 +16,11 @@ pub fn addGnuMake(
     });
 
     const config_step = b.allocator.create(std.build.Step) catch unreachable;
-    config_step.* = std.build.Step.initNoOp(.custom, "configure GNU Make", b.allocator);
+    config_step.* = std.build.Step.init(.{
+        .id = .custom,
+        .name = "configure GNU Make",
+        .owner = b,
+    });
     // note: this MUST be the first dependency
     config_step.dependOn(&repo.step);
     

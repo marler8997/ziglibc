@@ -15,7 +15,12 @@ const NcursesPrepStep = struct {
     pub fn create(b: *std.build.Builder, repo: *GitRepoStep) *NcursesPrepStep {
         var result = b.allocator.create(NcursesPrepStep) catch unreachable;
         result.* = NcursesPrepStep{
-            .step = std.build.Step.init(.custom, "ncurses prep", b.allocator, make),
+            .step = std.build.Step.init(.{
+                .id = .custom,
+                .name = "ncurses prep",
+                .owner = b,
+                .makeFn = make,
+            }),
             .builder = b,
             .repo_path = repo.path,
             .defs_h_src = b.pathJoin(&.{repo.path, "include", "ncurses_defs"}),
@@ -25,7 +30,8 @@ const NcursesPrepStep = struct {
         result.*.step.dependOn(&repo.step);
         return result;
     }
-    fn make(step: *std.build.Step) !void {
+    fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
+        _ = progress;
         const self = @fieldParentPtr(NcursesPrepStep, "step", step);
         //try self.generateCuresesH();
         try self.generateNcursesDefH();

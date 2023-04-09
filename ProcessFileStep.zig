@@ -21,7 +21,12 @@ pub fn create(b: *std.build.Builder, opt: struct {
     var result = b.allocator.create(ProcessFileStep) catch unreachable;
     const name = std.fmt.allocPrint(b.allocator, "process file '{s}'", .{std.fs.path.basename(opt.in_filename)}) catch unreachable;
     result.* = ProcessFileStep{
-        .step = std.build.Step.init(.custom, name, b.allocator, make),
+        .step = std.build.Step.init(.{
+            .id = .custom,
+            .name = name,
+            .owner = b,
+            .makeFn = make,
+        }),
         .in_filename = opt.in_filename,
         .out_filename = opt.out_filename,
         .subs = opt.subs,
@@ -29,7 +34,8 @@ pub fn create(b: *std.build.Builder, opt: struct {
     return result;
 }
 
-fn make(step: *std.build.Step) !void {
+fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
+    _ = progress;
     const self = @fieldParentPtr(ProcessFileStep, "step", step);
 
     if (try filecheck.leftFileIsNewer(self.out_filename, self.in_filename)) {

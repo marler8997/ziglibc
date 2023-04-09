@@ -108,60 +108,46 @@ pub fn build(b: *std.build.Builder) void {
     {
         const exe = addTest("hello", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
-        run_step.stdout_action = .{
-            .expect_exact = "Hello\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Hello\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("strings", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("fs", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("format", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = test_env_exe.run();
         run_step.addArtifactArg(exe);
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("types", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
         run_step.addArg(b.fmt("{}", .{@divExact(target.toTarget().cpu.arch.ptrBitWidth(), 8)}));
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("scanf", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("strto", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
@@ -169,19 +155,19 @@ pub fn build(b: *std.build.Builder) void {
         addPosix(exe, libc_only_posix);
         {
             const run = exe.run();
-            run.stdout_action = .{ .expect_exact = "aflag=0, c_arg='(null)'\n" };
+            run.addCheck(.{ .expect_stdout_exact = "aflag=0, c_arg='(null)'\n" });
             test_step.dependOn(&run.step);
         }
         {
             const run = exe.run();
             run.addArgs(&.{ "-a" });
-            run.stdout_action = .{ .expect_exact = "aflag=1, c_arg='(null)'\n" };
+            run.addCheck(.{ .expect_stdout_exact = "aflag=1, c_arg='(null)'\n" });
             test_step.dependOn(&run.step);
         }
         {
             const run = exe.run();
             run.addArgs(&.{ "-c", "hello" });
-            run.stdout_action = .{ .expect_exact = "aflag=0, c_arg='hello'\n" };
+            run.addCheck(.{ .expect_stdout_exact = "aflag=0, c_arg='hello'\n" });
             test_step.dependOn(&run.step);
         }
     }
@@ -190,9 +176,7 @@ pub fn build(b: *std.build.Builder) void {
     if (target.getOsTag() == .linux) {
         const exe = addTest("jmp", b, target, optimize, libc_only_std_static, zig_start);
         const run_step = exe.run();
-        run_step.stdout_action = .{
-            .expect_exact = "Success!\n",
-        };
+        run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
 

@@ -8,14 +8,20 @@ const BusyboxPrepStep = struct {
     pub fn create(b: *std.build.Builder, repo: *GitRepoStep) *BusyboxPrepStep {
         var result = b.allocator.create(BusyboxPrepStep) catch unreachable;
         result.* = BusyboxPrepStep{
-            .step = std.build.Step.init(.custom, "busybox prep", b.allocator, make),
+            .step = std.build.Step.init(.{
+                .id = .custom,
+                .name = "busybox prep",
+                .owner = b,
+                .makeFn = make,
+            }),
             .builder = b,
             .repo_path = repo.path,
         };
         result.*.step.dependOn(&repo.step);
         return result;
     }
-    fn make(step: *std.build.Step) !void {
+    fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
+        _ = progress;
         const self = @fieldParentPtr(BusyboxPrepStep, "step", step);
         const b = self.builder;
 
