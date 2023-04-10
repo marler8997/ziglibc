@@ -56,6 +56,7 @@ pub fn build(b: *std.build.Builder) void {
         .optimize = optimize,
     });
     libc_only_std_static.install();
+    b.step("libc-only-std", "").dependOn(&libc_only_std_static.install_step.?.step);
     const libc_only_std_shared = libcbuild.addLibc(b, .{
         .variant = .only_std,
         .link = .shared,

@@ -273,14 +273,19 @@ export fn isatty(fd: c_int) callconv(.C) c_int {
 // --------------------------------------------------------------------------------
 // sys/time
 // --------------------------------------------------------------------------------
+const std_has_timespec = @hasDecl(std.os.system, "timespec");
+const timespec = if (std_has_timespec) std.os.system.timespec else struct { placeholder: u32 };
+
 comptime {
-    std.debug.assert(@sizeOf(c.timespec) == @sizeOf(os.timespec));
-    if (builtin.os.tag != .windows) {
-        std.debug.assert(c.CLOCK_REALTIME == os.CLOCK.REALTIME);
+    if (std_has_timespec) {
+        std.debug.assert(@sizeOf(c.timespec) == @sizeOf(timespec));
+        if (builtin.os.tag != .windows) {
+            std.debug.assert(c.CLOCK_REALTIME == os.CLOCK.REALTIME);
+        }
     }
 }
 
-export fn clock_gettime(clk_id: c.clockid_t, tp: *os.timespec) callconv(.C) c_int {
+export fn clock_gettime(clk_id: c.clockid_t, tp: *timespec) callconv(.C) c_int {
     if (builtin.os.tag == .windows) {
         if (clk_id == c.CLOCK_REALTIME) {
             var ft: os.windows.FILETIME = undefined;

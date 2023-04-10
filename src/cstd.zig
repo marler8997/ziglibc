@@ -1,5 +1,6 @@
 const builtin = @import("builtin");
 const std = @import("std");
+const os = if (@hasDecl(std, "os")) std.os else struct { };
 
 const c = @cImport({
     // problem with LONG_MIN/LONG_MAX, they are currently assuming 64 bit
@@ -16,12 +17,18 @@ const c = @cImport({
 
 const trace = @import("trace.zig");
 
+pub const sys = struct {
+    pub const has_page_allocator = @hasDecl(std.heap, "page_allocator");
+    pub const supports_read = (builtin.os.tag == .windows or @hasDecl(os.system, "read"));
+    pub const supports_write = (builtin.os.tag == .windows or @hasDecl(os.system, "write"));
+};
+
 // __main appears to be a design inherited by LLVM from gcc.
 // it's typically provided by libgcc and is used to call constructors
 fn __main() callconv(.C) void {
-    stdin.fd = std.os.windows.peb().ProcessParameters.hStdInput;
-    stdout.fd = std.os.windows.peb().ProcessParameters.hStdOutput;
-    stderr.fd = std.os.windows.peb().ProcessParameters.hStdError;
+    stdin.fd = os.windows.peb().ProcessParameters.hStdInput;
+    stdout.fd = os.windows.peb().ProcessParameters.hStdOutput;
+    stderr.fd = os.windows.peb().ProcessParameters.hStdError;
 
     // TODO: call constructors
 }
@@ -30,7 +37,7 @@ comptime {
 }
 
 const windows = struct {
-    const HANDLE = std.os.windows.HANDLE;
+    const HANDLE = os.windows.HANDLE;
 
     // always sets out_written, even if it returns an error
     fn writeAll(hFile: HANDLE, buffer: []const u8, out_written: *usize) error{WriteFailed}!void {
@@ -38,7 +45,7 @@ const windows = struct {
         while (written < buffer.len) {
             const next_write = std.math.cast(u32, buffer.len - written) orelse std.math.maxInt(u32);
             var last_written: u32 = undefined;
-            const result = std.os.windows.kernel32.WriteFile(hFile, buffer.ptr + written, next_write, &last_written, null);
+            const result = os.windows.kernel32.WriteFile(hFile, buffer.ptr + written, next_write, &last_written, null);
             written += last_written; // WriteFile always sets last_written to 0 before doing anything
             if (result != 0) {
                 out_written.* = written;
@@ -66,7 +73,8 @@ export var errno: c_int = 0;
 // --------------------------------------------------------------------------------
 // stdlib
 // --------------------------------------------------------------------------------
-export fn exit(status: c_int) callconv(.C) noreturn {
+comptime { if (@hasDecl(os, "exit")) @export(exit, .{ .name = "exit" }); }
+pub fn exit(status: c_int) callconv(.C) noreturn {
     trace.log("exit {}", .{status});
 
     {
@@ -80,7 +88,7 @@ export fn exit(status: c_int) callconv(.C) noreturn {
             global.atexit_funcs.items[i-1]();
         }
     }
-    std.os.exit(@intCast(u8, status));
+    os.exit(@intCast(u8, status));
 }
 
 const ExitFunc = switch (builtin.zig_backend) {
@@ -558,14 +566,14 @@ export fn signal(sig: c_int, func: SignalFn) callconv(.C) ?SignalFn {
         return null;
     }
     if (builtin.os.tag == .linux) {
-        var action = std.os.Sigaction{
+        var action = os.Sigaction{
             .handler = .{ .handler = func },
-            .mask = std.os.linux.empty_sigset,
-            .flags = std.os.SA.RESTART,
+            .mask = os.linux.empty_sigset,
+            .flags = os.SA.RESTART,
             .restorer = null,
         };
-        var old_action: std.os.Sigaction = undefined;
-        switch (std.os.errno(std.os.linux.sigaction(
+        var old_action: os.Sigaction = undefined;
+        switch (os.errno(os.linux.sigaction(
             @intCast(u6, sig),
             &action,
             &old_action,
@@ -585,6 +593,8 @@ export fn signal(sig: c_int, func: SignalFn) callconv(.C) ?SignalFn {
 // --------------------------------------------------------------------------------
 // stdio
 // --------------------------------------------------------------------------------
+const have_std_handles = (builtin.os.tag == .windows or @hasDecl(os.system, "STDIN_FILENO"));
+
 const global = struct {
     var rand: std.rand.DefaultPrng = undefined;
 
@@ -600,11 +610,14 @@ const global = struct {
     //       the page index and file offset
     const max_file_count = 100;
     var files_reserved: [max_file_count]bool = [_]bool{false} ** max_file_count;
-    var files: [max_file_count]c.FILE = [_]c.FILE{
-        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDIN_FILENO, .eof = 0, .errno = undefined },
-        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDOUT_FILENO, .eof = 0, .errno = undefined },
-        .{ .fd = if (builtin.os.tag == .windows) undefined else std.os.STDERR_FILENO, .eof = 0, .errno = undefined },
-    } ++ ([_]c.FILE{undefined} ** (max_file_count - 3));
+
+    var files: [max_file_count]c.FILE = if (have_std_handles) ([_]c.FILE{
+        .{ .fd = if (builtin.os.tag == .windows) undefined else os.STDIN_FILENO, .eof = 0, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else os.STDOUT_FILENO, .eof = 0, .errno = undefined },
+        .{ .fd = if (builtin.os.tag == .windows) undefined else os.STDERR_FILENO, .eof = 0, .errno = undefined },
+    } ++ ([_]c.FILE{undefined} ** (max_file_count - 3)))
+    else ([_]c.FILE{undefined} ** max_file_count)
+    ;
 
     fn reserveFile() *c.FILE {
         var i: usize = 0;
@@ -682,11 +695,13 @@ export fn rename(old: [*:0]const u8, new: [*:0]const u8) callconv(.C) c_int {
     @panic("rename not implemented");
 }
 
-export fn getchar() callconv(.C) c_int {
+comptime { if (sys.supports_read) @export(getchar, .{}); }
+pub fn getchar() callconv(.C) c_int {
     return getc(stdin);
 }
 
-export fn getc(stream: *c.FILE) callconv(.C) c_int {
+comptime { if (sys.supports_read) @export(getc, .{}); }
+pub fn getc(stream: *c.FILE) callconv(.C) c_int {
     if (stream.eof != 0) @panic("getc, eof not 0 not implemented");
     trace.log("getc {*}", .{stream});
 
@@ -699,12 +714,12 @@ export fn getc(stream: *c.FILE) callconv(.C) c_int {
     }
 
     var buf: [1]u8 = undefined;
-    const rc = std.os.system.read(stream.fd, &buf, 1);
+    const rc = os.system.read(stream.fd, &buf, 1);
     if (rc == 1) {
         trace.log("getc return {}", .{buf[0]});
         return buf[0];
     }
-    stream.errno = if (rc == 0) 0 else @enumToInt(std.os.errno(rc));
+    stream.errno = if (rc == 0) 0 else @enumToInt(os.errno(rc));
     trace.log("getc return EOF, errno={}", .{stream.errno});
     return c.EOF;
 }
@@ -714,7 +729,8 @@ export fn getc(stream: *c.FILE) callconv(.C) c_int {
 //comptime {
 //    @export(getc, .{ .name = "fgetc" });
 //}
-export fn fgetc(stream: *c.FILE) callconv(.C) c_int { return getc(stream); }
+comptime { if (sys.supports_read) @export(fgetc, .{}); }
+pub fn fgetc(stream: *c.FILE) callconv(.C) c_int { return getc(stream); }
 
 export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (stream.eof != 0) @panic("ungetc, eof not 0 not implemented");
@@ -722,7 +738,8 @@ export fn ungetc(char: c_int, stream: *c.FILE) callconv(.C) c_int {
     @panic("ungetc not implemented");
 }
 
-export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usize {
+comptime { if (sys.supports_read) @export(_fread_buf, .{}); }
+pub fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usize {
     // TODO: should I check stream.eof here?
 
     if (builtin.os.tag == .windows) {
@@ -730,8 +747,8 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
         while (true) {
             var amt_read: u32 = undefined;
             // TODO: is stream.fd.? right?
-            if (std.os.windows.kernel32.ReadFile(stream.fd.?, ptr, actual_read_len, &amt_read, null) == 0) {
-                switch (std.os.windows.kernel32.GetLastError()) {
+            if (os.windows.kernel32.ReadFile(stream.fd.?, ptr, actual_read_len, &amt_read, null) == 0) {
+                switch (os.windows.kernel32.GetLastError()) {
                     .OPERATION_ABORTED => continue,
                     .BROKEN_PIPE => return 0,
                     .HANDLE_EOF => return 0,
@@ -751,20 +768,25 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
     };
     const adjusted_len = std.math.min(max_count, size);
 
-    const rc = std.os.system.read(stream.fd, ptr, adjusted_len);
-    switch (std.os.errno(rc)) {
-        .SUCCESS => {
-            if (rc == 0) stream.eof = 1;
-            return @intCast(usize, rc);
-        },
-        else => |e| {
-            errno = @enumToInt(e);
-            return 0;
-        },
+    if (@hasDecl(os.system, "read")) {
+        const rc = os.system.read(stream.fd, ptr, adjusted_len);
+        switch (os.errno(rc)) {
+            .SUCCESS => {
+                if (rc == 0) stream.eof = 1;
+                return @intCast(usize, rc);
+            },
+            else => |e| {
+                errno = @enumToInt(e);
+                return 0;
+            },
+        }
     }
+
+    @panic("todo: implement read for this platform");
 }
 
-export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
+comptime { if (sys.supports_read) @export(fread, .{}); }
+pub fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
     if (stream.eof != 0) @panic("fread, eof not 0 not implemented");
     const total = size * nmemb;
     const result = _fread_buf(ptr, total, stream);
@@ -780,17 +802,18 @@ export fn feof(stream: *c.FILE) callconv(.C) c_int {
     return stream.eof;
 }
 
-export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
+comptime { if (builtin.os.tag != .freestanding) @export(fopen, .{}); }
+pub fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
     trace.log("fopen {} mode={}", .{trace.fmtStr(filename), trace.fmtStr(mode)});
     if (builtin.os.tag == .windows) {
-        var create_disposition: u32 = std.os.windows.OPEN_EXISTING;
+        var create_disposition: u32 = os.windows.OPEN_EXISTING;
         var access: u32 = 0;
         for (std.mem.span(mode)) |mode_char| {
             if (mode_char == 'r') {
-                access |= std.os.windows.GENERIC_READ;
+                access |= os.windows.GENERIC_READ;
             } else if (mode_char == 'w') {
-                access |= std.os.windows.GENERIC_WRITE;
-                create_disposition = std.os.windows.CREATE_ALWAYS;
+                access |= os.windows.GENERIC_WRITE;
+                create_disposition = os.windows.CREATE_ALWAYS;
             } else if (mode_char == 'b') {
                 // not really sure what this is supposed to do yet, ignore it for now
             } else {
@@ -800,17 +823,17 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
         const fd = windows.CreateFileA(
             filename,
             access,
-            std.os.windows.FILE_SHARE_DELETE |
-            std.os.windows.FILE_SHARE_READ |
-            std.os.windows.FILE_SHARE_WRITE,
+            os.windows.FILE_SHARE_DELETE |
+            os.windows.FILE_SHARE_READ |
+            os.windows.FILE_SHARE_WRITE,
             null,
             create_disposition,
-            std.os.windows.FILE_ATTRIBUTE_NORMAL,
+            os.windows.FILE_ATTRIBUTE_NORMAL,
             null,
         );
-        if (fd == std.os.windows.INVALID_HANDLE_VALUE) {
+        if (fd == os.windows.INVALID_HANDLE_VALUE) {
             // TODO: do I need to set errno?
-            errno = @enumToInt(std.os.windows.kernel32.GetLastError());
+            errno = @enumToInt(os.windows.kernel32.GetLastError());
             return null;
         }
         const file = global.reserveFile();
@@ -822,17 +845,17 @@ export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.F
     var flags: u32 = 0;
     for (std.mem.span(mode)) |mode_char| {
         if (mode_char == 'r') {
-            flags |= std.os.O.RDONLY;
+            flags |= os.O.RDONLY;
         } else if (mode_char == 'w') {
-            flags |= std.os.O.WRONLY | std.os.O.CREAT | std.os.O.TRUNC;
+            flags |= os.O.WRONLY | os.O.CREAT | os.O.TRUNC;
         } else if (mode_char == 'b') {
             // not really sure what this is supposed to do yet, ignore it for now
         } else {
             std.debug.panic("unhandled open flag '{c}' (from {})", .{ mode_char, trace.fmtStr(mode) });
         }
     }
-    const fd = std.os.system.open(filename, flags, 0o666);
-    switch (std.os.errno(fd)) {
+    const fd = os.system.open(filename, flags, 0o666);
+    switch (os.errno(fd)) {
         .SUCCESS => {},
         else => |e| {
             errno = @enumToInt(e);
@@ -856,15 +879,16 @@ export fn freopen(filename: [*:0]const u8, mode: [*:0]const u8, stream: *c.FILE)
 export fn fclose(stream: *c.FILE) callconv(.C) c_int {
     trace.log("fclose {*}", .{stream});
     if (builtin.os.tag == .windows) {
-        std.os.close(stream.fd.?);
+        os.close(stream.fd.?);
     } else {
-        std.os.close(stream.fd);
+        os.close(stream.fd);
     }
     global.releaseFile(stream);
     return 0;
 }
 
-export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_int {
+comptime { if (builtin.os.tag != .freestanding) @export(fseek, .{}); }
+pub fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_int {
     // TODO: update eof when applicable
     trace.log("fseek {*} offset={} whence={}", .{stream, offset, whence});
 
@@ -876,8 +900,8 @@ export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_i
     // return syscall3(.lseek, @bitCast(usize, @as(isize, fd)), @bitCast(usize, offset), whence);
     //                                                                   ^
     if (@sizeOf(usize) == 4) @panic("not implemented");
-    const rc = std.os.system.lseek(stream.fd, @intCast(i64, offset), @intCast(usize, whence));
-    switch (std.os.errno(rc)) {
+    const rc = os.system.lseek(stream.fd, @intCast(i64, offset), @intCast(usize, whence));
+    switch (os.errno(rc)) {
         .SUCCESS => return 0,
         else => |e| {
             errno = @enumToInt(e);
@@ -891,7 +915,8 @@ export fn ftell(stream: *c.FILE) callconv(.C) c_long {
     @panic("ftell not implemented");
 }
 
-export fn rewind(stream: *c.FILE) callconv(.C) void {
+comptime { if (builtin.os.tag != .freestanding) @export(rewind, .{}); }
+pub fn rewind(stream: *c.FILE) callconv(.C) void {
     trace.log("rewind {*}", .{stream});
     if (0 == fseek(stream, 0, c.SEEK_SET)) {
         stream.eof = 0;
@@ -903,20 +928,21 @@ export fn rewind(stream: *c.FILE) callconv(.C) void {
 // TODO: why is there a putc and an fputc function? They seem to be equivalent
 //       so what's the history?
 comptime {
-    @export(fputc, .{ .name = "putc" });
+    if (builtin.os.tag != .freestanding) @export(fputc, .{ .name = "putc" });
 }
 
-export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
+comptime { if (sys.supports_write) @export(fputc, .{}); }
+pub fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     trace.log("fputc {} stream={*}", .{character, stream});
     if (builtin.os.tag == .windows) {
         @panic("fputc not implemented");
     }
     const buf = [_]u8{@intCast(u8, 0xff & character)};
-    const written = std.os.system.write(stream.fd, &buf, 1);
-    switch (std.os.errno(written)) {
+    const written = os.system.write(stream.fd, &buf, 1);
+    switch (os.errno(written)) {
         .SUCCESS => {
             if (written == 1) return character;
-            stream.errno = @enumToInt(std.os.E.IO);
+            stream.errno = @enumToInt(os.E.IO);
             return c.EOF;
         },
         else => |e| {
@@ -926,20 +952,21 @@ export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     }
 }
 
+comptime { if (sys.supports_write) @export(_fwrite_buf, .{}); }
 // NOTE: this is not apart of libc
-export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
+pub fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.C) usize {
     if (builtin.os.tag == .windows) {
         var written: usize = undefined;
         windows.writeAll(stream.fd.?, ptr[0..size], &written) catch {
-            stream.errno = @enumToInt(std.os.windows.kernel32.GetLastError());
+            stream.errno = @enumToInt(os.windows.kernel32.GetLastError());
         };
         return written;
     }
-    const written = std.os.system.write(stream.fd, ptr, size);
-    switch (std.os.errno(written)) {
+    const written = os.system.write(stream.fd, ptr, size);
+    switch (os.errno(written)) {
         .SUCCESS => {
             if (written != size) {
-                stream.errno = @enumToInt(std.os.E.IO);
+                stream.errno = @enumToInt(os.E.IO);
             }
             return written;
         },
@@ -952,7 +979,8 @@ export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.
 
 // TODO: can ptr be NULL?
 // TODO: can stream be NULL (I don't think it can)
-export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
+comptime { if (sys.supports_write) @export(fwrite, .{}); }
+pub fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *c.FILE) callconv(.C) usize {
     trace.log("fwrite {*} size={} n={} stream={*}", .{ptr, size, nmemb, stream});
     const total = size * nmemb;
     const result = _fwrite_buf(ptr, total, stream);
@@ -971,12 +999,14 @@ export fn putchar(ch: c_int) callconv(.C) c_int {
     return if (1 == _fwrite_buf(&buf, 1, stdout)) buf[0] else c.EOF;
 }
 
-export fn puts(s: [*:0]const u8) callconv(.C) c_int {
+comptime { if (sys.supports_write) @export(puts, .{}); }
+pub fn puts(s: [*:0]const u8) callconv(.C) c_int {
     trace.log("puts {}", .{trace.fmtStr(s)});
     return fputs(s, stdout);
 }
 
-export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
+comptime { if (sys.supports_write) @export(fputs, .{}); }
+pub fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
     trace.log("fputs {} stream={*}", .{trace.fmtStr(s), stream});
     // NOTE: this is inneficient
     //       Maybe I could do a writev?
@@ -997,7 +1027,8 @@ export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
     return if (written == 0) c.EOF else 1;
 }
 
-export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) ?[*]u8 {
+comptime { if (sys.supports_read) @export(fgets, .{}); }
+pub fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) ?[*]u8 {
     if (stream.eof != 0) return null;
 
     // TODO: this implementation is very slow/inefficient
