@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------
 // fcntl
 // --------------------------------------------------------------------------------
-int open(const char *path, int oflag, lll)
+int open(const char *path, int oflag)
 {
     fprintf(stderr, "open function not implemented\n");
     abort();

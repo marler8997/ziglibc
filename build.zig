@@ -13,7 +13,7 @@ pub fn build(b: *std.build.Builder) void {
             .name = "genheaders",
             .root_source_file = .{ .path = "src" ++ std.fs.path.sep_str ++ "genheaders.zig" },
         });
-        const run = exe.run();
+        const run = b.addRunArtifact(exe);
         run.addArg(b.pathFromRoot("capi.txt"));
         b.step("genheaders", "Generate C Headers").dependOn(&run.step);
     }
@@ -22,8 +22,7 @@ pub fn build(b: *std.build.Builder) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const zig_start = libcbuild.addZigStart(b, target, optimize);
-    zig_start.install();
-    b.step("start", "").dependOn(&zig_start.install_step.?.step);
+    b.step("start", "").dependOn(&installArtifact(b, zig_start).step);
 
     const libc_full_static = libcbuild.addLibc(b, .{
         .variant = .full,
@@ -33,7 +32,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_full_static.install();
+    b.installArtifact(libc_full_static);
     const libc_full_shared = libcbuild.addLibc(b, .{
         .variant = .full,
         .link = .shared,
@@ -42,8 +41,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_full_shared.install();
-    b.step("libc-full-shared", "").dependOn(&libc_full_shared.install_step.?.step);
+    b.step("libc-full-shared", "").dependOn(&installArtifact(b, libc_full_shared).step);
     // TODO: create a specs file?
     //       you can add -specs=file to the gcc command line to override values in the spec
 
@@ -55,7 +53,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_only_std_static.install();
+    b.installArtifact(libc_only_std_static);
     const libc_only_std_shared = libcbuild.addLibc(b, .{
         .variant = .only_std,
         .link = .shared,
@@ -64,7 +62,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_only_std_shared.install();
+    b.installArtifact(libc_only_std_shared);
 
     const libc_only_posix = libcbuild.addLibc(b, .{
         .variant = .only_posix,
@@ -74,7 +72,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_only_posix.install();
+    b.installArtifact(libc_only_posix);
 
     const libc_only_linux = libcbuild.addLibc(b, .{
         .variant = .only_linux,
@@ -84,7 +82,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_only_linux.install();
+    b.installArtifact(libc_only_linux);
 
     const libc_only_gnu = libcbuild.addLibc(b, .{
         .variant = .only_gnu,
@@ -94,7 +92,7 @@ pub fn build(b: *std.build.Builder) void {
         .target = target,
         .optimize = optimize,
     });
-    libc_only_gnu.install();
+    b.installArtifact(libc_only_gnu);
 
     const test_step = b.step("test", "Run unit tests");
 
@@ -107,46 +105,46 @@ pub fn build(b: *std.build.Builder) void {
 
     {
         const exe = addTest("hello", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = exe.run();
+        const run_step = b.addRunArtifact(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Hello\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("strings", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = exe.run();
+        const run_step = b.addRunArtifact(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("fs", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = test_env_exe.run();
+        const run_step = b.addRunArtifact(test_env_exe);
         run_step.addArtifactArg(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("format", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = test_env_exe.run();
+        const run_step = b.addRunArtifact(test_env_exe);
         run_step.addArtifactArg(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("types", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = exe.run();
-        run_step.addArg(b.fmt("{}", .{@divExact(target.toTarget().cpu.arch.ptrBitWidth(), 8)}));
+        const run_step = b.addRunArtifact(exe);
+        run_step.addArg(b.fmt("{}", .{@divExact(target.toTarget().ptrBitWidth(), 8)}));
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("scanf", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = exe.run();
+        const run_step = b.addRunArtifact(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
     {
         const exe = addTest("strto", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = exe.run();
+        const run_step = b.addRunArtifact(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
@@ -154,18 +152,18 @@ pub fn build(b: *std.build.Builder) void {
         const exe = addTest("getopt", b, target, optimize, libc_only_std_static, zig_start);
         addPosix(exe, libc_only_posix);
         {
-            const run = exe.run();
+            const run = b.addRunArtifact(exe);
             run.addCheck(.{ .expect_stdout_exact = "aflag=0, c_arg='(null)'\n" });
             test_step.dependOn(&run.step);
         }
         {
-            const run = exe.run();
+            const run = b.addRunArtifact(exe);
             run.addArgs(&.{ "-a" });
             run.addCheck(.{ .expect_stdout_exact = "aflag=1, c_arg='(null)'\n" });
             test_step.dependOn(&run.step);
         }
         {
-            const run = exe.run();
+            const run = b.addRunArtifact(exe);
             run.addArgs(&.{ "-c", "hello" });
             run.addCheck(.{ .expect_stdout_exact = "aflag=0, c_arg='hello'\n" });
             test_step.dependOn(&run.step);
@@ -175,7 +173,7 @@ pub fn build(b: *std.build.Builder) void {
     // this test only works on linux right now
     if (target.getOsTag() == .linux) {
         const exe = addTest("jmp", b, target, optimize, libc_only_std_static, zig_start);
-        const run_step = exe.run();
+        const run_step = b.addRunArtifact(exe);
         run_step.addCheck(.{ .expect_stdout_exact = "Success!\n" });
         test_step.dependOn(&run_step.step);
     }
@@ -192,6 +190,13 @@ pub fn build(b: *std.build.Builder) void {
 
     _ = @import("busybox/build.zig").add(b, target, optimize, libc_only_std_static, libc_only_posix);
     _ = @import("ncurses/build.zig").add(b, target, optimize, libc_only_std_static, libc_only_posix);
+}
+
+// re-implements Build.installArtifact but also returns it
+fn installArtifact(b: *std.Build, artifact: anytype) *std.Build.Step.InstallArtifact {
+    const install = b.addInstallArtifact(artifact);
+    b.getInstallStep().dependOn(&install.step);
+    return install;
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
@@ -281,7 +286,7 @@ fn addLibcTest(
             exe.linkSystemLibrary("ntdll");
             exe.linkSystemLibrary("kernel32");
         }
-        libc_test_step.dependOn(&exe.run().step);
+        libc_test_step.dependOn(&b.addRunArtifact(exe).step);
     }
 }
 
@@ -307,7 +312,7 @@ fn addTinyRegexCTests(
             .target = target,
             .optimize = optimize,
         });
-        //exe.install();
+        //b.installArtifact(exe);
         exe.step.dependOn(&repo.step);
         const repo_path = repo.getPath(&exe.step);
         var files = std.ArrayList([]const u8).init(b.allocator);
@@ -336,7 +341,7 @@ fn addTinyRegexCTests(
 
         //const step = b.step("re", "build the re (tiny-regex-c) tool");
         //step.dependOn(&exe.install_step.?.step);
-        const run = exe.run();
+        const run = b.addRunArtifact(exe);
         re_step.dependOn(&run.step);
     }
 }
@@ -360,7 +365,7 @@ fn addLua(
         .optimize = optimize,
     });
     lua_exe.step.dependOn(&lua_repo.step);
-    lua_exe.install();
+    const install = installArtifact(b, lua_exe);
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
     files.append(b.pathJoin(&.{ lua_repo_path, "lua.c" })) catch unreachable;
@@ -391,13 +396,13 @@ fn addLua(
         lua_exe.linkSystemLibrary("kernel32");
     }
 
-    const step = b.step("lua", "build the LUA interpreter");
-    step.dependOn(&lua_exe.install_step.?.step);
+    const step = b.step("lua", "build/install the LUA interpreter");
+    step.dependOn(&install.step);
 
     const test_step = b.step("lua-test", "Run the lua tests");
 
     for ([_][]const u8{ "bwcoercion.lua", "tracegc.lua" }) |test_file| {
-        var run_test = lua_exe.run();
+        var run_test = b.addRunArtifact(lua_exe);
         run_test.addArg(b.pathJoin(&.{ lua_repo_path, "testes", test_file }));
         test_step.dependOn(&run_test.step);
     }
@@ -431,7 +436,7 @@ fn addCmph(
         .target = target,
         .optimize = optimize,
     });
-    exe.install();
+    const install = installArtifact(b, exe);
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
     const repo_path = repo.getPath(&exe.step);
@@ -463,7 +468,7 @@ fn addCmph(
     }
 
     const step = b.step("cmph", "build the cmph tool");
-    step.dependOn(&exe.install_step.?.step);
+    step.dependOn(&install.step);
 
     return exe;
 }
@@ -509,7 +514,7 @@ fn addYacc(
         .target = target,
         .optimize = optimize,
     });
-    exe.install();
+    const install = installArtifact(b, exe);
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(&config_step.step);
     exe.step.dependOn(&gen_progname_step.step);
@@ -539,7 +544,7 @@ fn addYacc(
     }
 
     const step = b.step("yacc", "build the yacc tool");
-    step.dependOn(&exe.install_step.?.step);
+    step.dependOn(&install.step);
 
     return exe;
 }
@@ -564,7 +569,7 @@ fn addYabfc(
         .target = target,
         .optimize = optimize,
     });
-    exe.install();
+    const install = installArtifact(b, exe);
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -592,8 +597,8 @@ fn addYabfc(
         exe.linkSystemLibrary("kernel32");
     }
 
-    const step = b.step("yabfc", "build the yabfc tool (Yet Another BrainFuck Compiler)");
-    step.dependOn(&exe.install_step.?.step);
+    const step = b.step("yabfc", "build/install the yabfc tool (Yet Another BrainFuck Compiler)");
+    step.dependOn(&install.step);
 
     return exe;
 }
@@ -618,8 +623,7 @@ fn addSecretGame(
         .target = target,
         .optimize = optimize,
     });
-    //exe.install();
-    _ = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -647,8 +651,8 @@ fn addSecretGame(
         exe.linkSystemLibrary("kernel32");
     }
 
-    const step = b.step("secret", "build the secret game");
-    step.dependOn(&exe.install_step.?.step);
+    const step = b.step("secret", "build/install the secret game");
+    step.dependOn(&install.step);
 
     return exe;
 }

@@ -74,8 +74,7 @@ pub fn addGnuMake(
         .target = target,
         .optimize = optimize,
     });
-    _ = b.addInstallArtifact(exe);
-    //exe.install();
+    const install = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(config_step);
     const repo_path = repo.getPath(&exe.step);
@@ -111,7 +110,7 @@ pub fn addGnuMake(
     }
 
     const step = b.step("make", "build GNU make");
-    step.dependOn(&exe.install_step.?.step);
+    step.dependOn(&install.step);
 
     return exe;
 }

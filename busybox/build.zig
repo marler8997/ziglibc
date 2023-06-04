@@ -54,8 +54,7 @@ pub fn add(
         .target = target,
         .optimize = optimize,
     });
-    //exe.install();
-    _ = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe);
     exe.step.dependOn(&prep.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -83,7 +82,7 @@ pub fn add(
     }
 
     const step = b.step("busybox", "build busybox and it's applets");
-    step.dependOn(&exe.install_step.?.step);
+    step.dependOn(&install.step);
 
     return exe;
 }

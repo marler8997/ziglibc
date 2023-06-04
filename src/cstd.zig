@@ -201,7 +201,7 @@ export fn calloc(nmemb: usize, size: usize) callconv(.C) ?[*]align(alloc_align) 
         return null;
     };
     const ptr = malloc(total) orelse return null;
-    @memset(ptr, 0, total);
+    @memset(ptr[0..total], 0);
     return ptr;
 }
 
@@ -320,7 +320,7 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
 
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     trace.log("strcpy {*} {*}", .{s1, s2});
-    @memcpy(s1, s2, std.mem.len(s2) + 1);
+    @memcpy(s1[0 .. std.mem.len(s2) + 1], s2);
     return @ptrCast([*:0]u8, s1); // TODO: use std.meta.assumeSentinel if it's brought back
 }
 
@@ -328,8 +328,8 @@ export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
 export fn strncpy(s1: [*]u8, s2: [*:0]const u8, n: usize) callconv(.C) [*]u8 {
     trace.log("strncpy {*} {} n={}", .{s1, trace.fmtStr(s2), n});
     const len = strnlen(s2, n);
-    @memcpy(s1, s2, len);
-    @memset(s1 + len, 0, n - len);
+    @memcpy(s1[0 .. len], s2);
+    @memset(s1[len..][0 .. n - len], 0);
     return s1;
 }
 
@@ -991,7 +991,7 @@ export fn fputs(s: [*:0]const u8, stream: *c.FILE) callconv(.C) c_int {
         },
     };
     defer std.heap.page_allocator.free(mem);
-    @memcpy(mem.ptr, s, len);
+    @memcpy(mem, s);
     mem[len] = '\n';
 
     const written = _fwrite_buf(mem.ptr, mem.len, stream);

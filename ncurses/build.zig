@@ -145,8 +145,7 @@ pub fn add(
     //    b.pathJoin(&.{"include", "curses.head"}),
     //   .{ .subs = &.{ defs_sub } },
     //);
-    //exe.install();
-    _ = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe);
     exe.step.dependOn(&prep.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -174,7 +173,7 @@ pub fn add(
     }
 
     const step = b.step("ncurses", "build the ncurses library");
-    step.dependOn(&exe.install_step.?.step);
+    step.dependOn(&install.step);
 
     return exe;
 }

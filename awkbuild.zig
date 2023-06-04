@@ -26,8 +26,7 @@ pub fn addAwk(
         .target = target,
         .optimize = optimize,
     });
-    _ = b.addInstallArtifact(exe);
-    //exe.install();
+    const install = b.addInstallArtifact(exe);
     exe.step.dependOn(&repo.step);
 //    exe.step.dependOn(&config_step.step);
     const repo_path = repo.getPath(&exe.step);
@@ -59,7 +58,7 @@ pub fn addAwk(
     }
 
     const step = b.step("awk", "build awk");
-    step.dependOn(&exe.install_step.?.step);
+    step.dependOn(&install.step);
 
     return exe;
 }
