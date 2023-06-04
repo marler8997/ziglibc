@@ -139,7 +139,7 @@ const alloc_align = 16;
 
 const alloc_metadata_len = std.mem.alignForward(@sizeOf(usize), alloc_align);
 
-export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
+pub export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
     trace.log("malloc {}", .{size});
     std.debug.assert(size > 0); // TODO: what should we do in this case?
     const full_len = alloc_metadata_len + size;
@@ -205,7 +205,7 @@ export fn calloc(nmemb: usize, size: usize) callconv(.C) ?[*]align(alloc_align) 
     return ptr;
 }
 
-export fn free(ptr: ?[*]align(alloc_align) u8) callconv(.C) void {
+pub export fn free(ptr: ?[*]align(alloc_align) u8) callconv(.C) void {
     trace.log("free {*}", .{ptr});
     const p = ptr orelse return;
     global.gpa.allocator().free(getGpaBuf(p));
@@ -781,7 +781,7 @@ export fn feof(stream: *c.FILE) callconv(.C) c_int {
     return stream.eof;
 }
 
-export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
+pub export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
     trace.log("fopen {} mode={}", .{trace.fmtStr(filename), trace.fmtStr(mode)});
     if (builtin.os.tag == .windows) {
         var create_disposition: u32 = std.os.windows.OPEN_EXISTING;
