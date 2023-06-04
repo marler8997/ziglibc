@@ -175,6 +175,7 @@ export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]
 
     const gpa_size = alloc_metadata_len + size;
     if (global.gpa.allocator().rawResize(gpa_buf, std.math.log2(alloc_align), gpa_size, @returnAddress())) {
+        @ptrCast(*usize, gpa_buf.ptr).* = gpa_size;
         trace.log("realloc return {*}", .{ptr});
         return ptr;
     }
