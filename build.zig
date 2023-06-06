@@ -88,7 +88,9 @@ pub fn build(b: *std.build.Builder) void {
         .optimize = optimize,
         .name = .auto,
     });
-    all_step.dependOn(&b.addInstallArtifact(libc_only_std_static).step);
+    const libc_only_std_static_install = b.addInstallArtifact(libc_only_std_static);
+    all_step.dependOn(&libc_only_std_static_install.step);
+    b.step("libc-only-std", "").dependOn(&libc_only_std_static_install.step);
 
     const libc_only_std_shared = libcbuild.addLibc(b, .{
         .variant = .only_std,
