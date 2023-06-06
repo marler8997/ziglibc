@@ -23,8 +23,8 @@ const NcursesPrepStep = struct {
             }),
             .builder = b,
             .repo_path = repo.path,
-            .defs_h_src = b.pathJoin(&.{repo.path, "include", "ncurses_defs"}),
-            .defs_h_dst = b.pathJoin(&.{repo.path, "include", "ncurses_def.h"}),
+            .defs_h_src = b.pathJoin(&.{ repo.path, "include", "ncurses_defs" }),
+            .defs_h_dst = b.pathJoin(&.{ repo.path, "include", "ncurses_def.h" }),
             //.curses_h = b.pathJoin(&.{repo.path, "include", "curses.h"}),
         };
         result.*.step.dependOn(&repo.step);
@@ -50,7 +50,7 @@ const NcursesPrepStep = struct {
         var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
         defer arena.deinit();
         const content = std.fs.cwd().readFileAlloc(arena.allocator(), self.defs_h_src, std.math.maxInt(usize)) catch |err| {
-            std.log.err("failed to read file '{s}' to process ({s})", .{self.defs_h_src, @errorName(err)});
+            std.log.err("failed to read file '{s}' to process ({s})", .{ self.defs_h_src, @errorName(err) });
             std.os.exit(0xff);
         };
 
@@ -74,7 +74,7 @@ const NcursesPrepStep = struct {
                 try writer.print("\n#ifndef {s}\n", .{name});
                 if (optional_value) |value| {
                     const value_offset = @ptrToInt(value.ptr) - @ptrToInt(line.ptr);
-                    try writer.print("#define {s} {s}\n", .{name, line[value_offset..]});
+                    try writer.print("#define {s} {s}\n", .{ name, line[value_offset..] });
                 } else {
                     try writer.print("#define {s} 0\n", .{name});
                 }
@@ -97,8 +97,8 @@ fn addProcessFile(
     },
 ) void {
     const process_file = ProcessFileStep.create(b, .{
-        .in_filename = b.pathJoin(&.{repo.path, in_sub_path}),
-        .out_filename = b.pathJoin(&.{repo.path, out_sub_path}),
+        .in_filename = b.pathJoin(&.{ repo.path, in_sub_path }),
+        .out_filename = b.pathJoin(&.{ repo.path, out_sub_path }),
         .subs = opt.subs,
     });
     process_file.step.dependOn(&repo.step);
@@ -111,6 +111,7 @@ pub fn add(
     optimize: anytype,
     libc_only_std_static: *std.build.LibExeObjStep,
     zig_posix: *std.build.LibExeObjStep,
+    install_step: *std.Build.Step,
 ) *std.build.LibExeObjStep {
     const repo = GitRepoStep.create(b, .{
         .url = "https://github.com/mirror/ncurses",
@@ -125,20 +126,26 @@ pub fn add(
         .target = target,
         .optimize = optimize,
     });
-    addProcessFile(b, repo, exe,
-        b.pathJoin(&.{"include", "ncurses_dll.h.in"}),
-        b.pathJoin(&.{"include", "ncurses_dll.h"}),
+    addProcessFile(
+        b,
+        repo,
+        exe,
+        b.pathJoin(&.{ "include", "ncurses_dll.h.in" }),
+        b.pathJoin(&.{ "include", "ncurses_dll.h" }),
         .{},
     );
 
-    const defs_sub = ProcessFileStep.Sub {
+    const defs_sub = ProcessFileStep.Sub{
         .current = "@DEFS@",
         .new = @embedFile("DEFS"),
     };
-    addProcessFile(b, repo, exe,
-        b.pathJoin(&.{"include", "ncurses_cfg.hin"}),
-        b.pathJoin(&.{"include", "ncurses_cfg.h"}),
-       .{ .subs = &.{ defs_sub } },
+    addProcessFile(
+        b,
+        repo,
+        exe,
+        b.pathJoin(&.{ "include", "ncurses_cfg.hin" }),
+        b.pathJoin(&.{ "include", "ncurses_cfg.h" }),
+        .{ .subs = &.{defs_sub} },
     );
     //addProcessFile(b, repo, exe,
     //    b.pathJoin(&.{"include", "curses.h.in"}),
@@ -147,16 +154,18 @@ pub fn add(
     //);
     const install = b.addInstallArtifact(exe);
     exe.step.dependOn(&prep.step);
+    install_step.dependOn(&install.step);
+
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    for ([_][]const u8 { "lib_initscr.c" }) |src| {
-        files.append(b.pathJoin(&.{repo_path, "ncurses", "base", src})) catch unreachable;
+    for ([_][]const u8{"lib_initscr.c"}) |src| {
+        files.append(b.pathJoin(&.{ repo_path, "ncurses", "base", src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
     });
-    exe.addIncludePath(b.pathJoin(&.{repo_path, "include"}));
-    exe.addIncludePath(b.pathJoin(&.{repo_path, "ncurses"}));
+    exe.addIncludePath(b.pathJoin(&.{ repo_path, "include" }));
+    exe.addIncludePath(b.pathJoin(&.{ repo_path, "ncurses" }));
 
     exe.addIncludePath("inc/libc");
     exe.addIncludePath("inc/posix");

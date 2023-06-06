@@ -2,6 +2,7 @@ const std = @import("std");
 const build = std.build;
 const LibExeObjStep = build.LibExeObjStep;
 
+pub const LibName = union(enum) { auto, explicit: []const u8 };
 pub const LinkKind = enum { static, shared };
 pub const LibVariant = enum {
     only_std,
@@ -11,6 +12,7 @@ pub const LibVariant = enum {
     full,
 };
 pub const Start = enum {
+    none,
     ziglibc,
     glibc,
 };
@@ -21,6 +23,7 @@ pub const ZigLibcOptions = struct {
     trace: bool,
     target: std.zig.CrossTarget,
     optimize: std.builtin.Mode,
+    name: LibName,
 };
 
 fn relpath(comptime src_path: []const u8) []const u8 {
@@ -50,20 +53,26 @@ pub fn addZigStart(
 // Returns ziglibc as a LibExeObjStep
 // Caller will also need to add the include path to get the C headers
 pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibExeObjStep {
-    const name = switch (opt.variant) {
-        .only_std => "c-only-std",
-        .only_posix => "c-only-posix",
-        .only_linux => "c-only-linux",
-        .only_gnu => "c-only-gnu",
-        //.full => "c",
-        .full => "cguana", // use cguana to avoid passing in '-lc' to zig which will
-                           // cause it to add the system libc headers
+    const name = switch (opt.name) {
+        .auto => switch (opt.variant) {
+            .only_std => "c-only-std",
+            .only_posix => "c-only-posix",
+            .only_linux => "c-only-linux",
+            .only_gnu => "c-only-gnu",
+            //.full => "c",
+            .full => "cguana", // use cguana to avoid passing in '-lc' to zig which will
+            // cause it to add the system libc headers
+        },
+        .explicit => |name| name,
     };
     const trace_options = builder.addOptions();
     trace_options.addOption(bool, "enabled", opt.trace);
 
     const modules_options = builder.addOptions();
-    modules_options.addOption(bool, "glibcstart", switch (opt.start) { .glibc => true, else => false });
+    modules_options.addOption(bool, "glibcstart", switch (opt.start) {
+        .glibc => true,
+        else => false,
+    });
     const index = relpath("src" ++ std.fs.path.sep_str ++ "lib.zig");
     const lib = switch (opt.link) {
         .static => builder.addStaticLibrary(.{
@@ -88,7 +97,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     lib.force_pic = true;
     lib.addOptions("modules", modules_options);
     lib.addOptions("trace_options", trace_options);
-    const c_flags = [_][]const u8 {
+    const c_flags = [_][]const u8{
         "-std=c11",
     };
     const include_cstd = switch (opt.variant) {
@@ -99,7 +108,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     if (include_cstd) {
         lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "printf.c"), &c_flags);
         lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "scanf.c"), &c_flags);
-        if (opt.target.getOsTag() == .linux) {
+        if (opt.target.getOsTag() == .linux and opt.target.getCpuArch().isX86()) {
             lib.addAssemblyFile(relpath("src/linux/jmp.s"));
         }
     }
