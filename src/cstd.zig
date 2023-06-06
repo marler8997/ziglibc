@@ -550,7 +550,7 @@ export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
 // --------------------------------------------------------------------------------
 const SignalFn = switch (builtin.zig_backend) {
     .stage1 => fn(c_int) callconv(.C) void,
-    else => *const fn(c_int) callconv(.C) void,
+    else => *align(1) const fn(c_int) callconv(.C) void,
 };
 export fn signal(sig: c_int, func: SignalFn) callconv(.C) ?SignalFn {
     if (builtin.os.tag == .windows) {
