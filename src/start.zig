@@ -32,7 +32,7 @@ fn windowsArgsAlloc() [:null]?[*:0]u8 {
     var tmp_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer tmp_arena.deinit();
 
-    var argv = std.ArrayListUnmanaged(?[*:0]u8) { };
+    var argv = std.ArrayListUnmanaged(?[*:0]u8){};
     var it = std.process.argsWithAllocator(tmp_arena.allocator()) catch |err| switch (err) {
         error.OutOfMemory => @panic(out_of_memory_msg),
         // TODO: would be nice to get the actual utf16 decode error name

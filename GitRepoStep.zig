@@ -62,8 +62,7 @@ pub fn create(b: *std.build.Builder, opt: struct {
         .name = name,
         .branch = opt.branch,
         .sha = opt.sha,
-        .path = if (opt.path) |p| b.allocator.dupe(u8, p) catch @panic("OOM")
-            else b.pathFromRoot(b.pathJoin(&.{"dep", name})),
+        .path = if (opt.path) |p| b.allocator.dupe(u8, p) catch @panic("OOM") else b.pathFromRoot(b.pathJoin(&.{ "dep", name })),
         .sha_check = opt.sha_check,
         .fetch_enabled = if (opt.fetch_enabled) |fe| fe else defaultFetchOption(b),
     };

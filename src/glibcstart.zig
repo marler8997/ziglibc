@@ -26,11 +26,11 @@ export fn __libc_start_main(
     argc: c_int,
     argv: [*:null]?[*:0]u8,
     init: switch (builtin.zig_backend) {
-        .stage1 => fn(argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
-        else => *const fn(argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
+        .stage1 => fn (argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
+        else => *const fn (argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
     },
-    fini: fn() callconv(.C) void,
-    rtld_fini: fn() callconv(.C) void,
+    fini: fn () callconv(.C) void,
+    rtld_fini: fn () callconv(.C) void,
     stack_end: *anyopaque,
 ) callconv(.C) noreturn {
     _ = init;

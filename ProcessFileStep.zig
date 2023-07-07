@@ -16,7 +16,7 @@ pub const Sub = struct {
 pub fn create(b: *std.build.Builder, opt: struct {
     in_filename: []const u8,
     out_filename: []const u8,
-    subs: []const Sub = &[_]Sub{ },
+    subs: []const Sub = &[_]Sub{},
 }) *ProcessFileStep {
     var result = b.allocator.create(ProcessFileStep) catch unreachable;
     const name = std.fmt.allocPrint(b.allocator, "process file '{s}'", .{std.fs.path.basename(opt.in_filename)}) catch unreachable;
@@ -41,11 +41,11 @@ fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
     if (try filecheck.leftFileIsNewer(self.out_filename, self.in_filename)) {
         return;
     }
-    
+
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const content = std.fs.cwd().readFileAlloc(arena.allocator(), self.in_filename, std.math.maxInt(usize)) catch |err| {
-        std.log.err("failed to read file '{s}' to process ({s})", .{self.in_filename, @errorName(err)});
+        std.log.err("failed to read file '{s}' to process ({s})", .{ self.in_filename, @errorName(err) });
         std.os.exit(0xff);
     };
     const tmp_filename = try std.fmt.allocPrint(arena.allocator(), "{s}.processing", .{self.out_filename});
@@ -58,7 +58,6 @@ fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
 }
 
 fn process(subs: []const Sub, writer: anytype, content: []const u8) !void {
-
     var last_flush: usize = 0;
     var i: usize = 0;
 

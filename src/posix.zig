@@ -86,12 +86,12 @@ export fn write(fd: c_int, buf: [*]const u8, nbyte: usize) callconv(.C) isize {
         else => |e| {
             c.errno = @enumToInt(e);
             return -1;
-        }
+        },
     }
 }
 
 export fn read(fd: c_int, buf: [*]u8, len: usize) callconv(.C) isize {
-    trace.log("read fd={} buf={*} len={}", .{fd, buf, len});
+    trace.log("read fd={} buf={*} len={}", .{ fd, buf, len });
     const rc = os.linux.read(fd, buf, len);
     switch (os.errno(rc)) {
         .SUCCESS => return @intCast(isize, rc),
@@ -156,7 +156,7 @@ export fn mkostemp(template: [*:0]u8, suffixlen: c_int, flags: c_int) callconv(.
                     c.errno = @enumToInt(e);
                     return -1;
                 }
-            }
+            },
         }
     }
 }
@@ -165,7 +165,7 @@ const filename_char_set =
     "+,-.0123456789=@ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
     "_abcdefghijklmnopqrstuvwxyz";
 fn randToFilenameChar(r: u8) u8 {
-    return filename_char_set[ r % filename_char_set.len ];
+    return filename_char_set[r % filename_char_set.len];
 }
 
 fn randomizeTempFilename(slice: *[6]u8) void {
@@ -193,7 +193,7 @@ export fn fileno(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn popen(command: [*:0]const u8, mode: [*:0]const u8) callconv(.C) *c.FILE {
-    trace.log("popen '{}' mode='{s}'", .{trace.fmtStr(command), mode});
+    trace.log("popen '{}' mode='{s}'", .{ trace.fmtStr(command), mode });
     @panic("popen not implemented");
 }
 export fn pclose(stream: *c.FILE) callconv(.C) c_int {
@@ -202,7 +202,7 @@ export fn pclose(stream: *c.FILE) callconv(.C) c_int {
 }
 
 export fn fdopen(fd: c_int, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
-    trace.log("fdopen {d} mode={s}", .{fd, mode});
+    trace.log("fdopen {d} mode={s}", .{ fd, mode });
     if (builtin.os.tag == .windows) @panic("not impl");
 
     const file = cstd.__zreserveFile() orelse {
@@ -224,7 +224,7 @@ export fn close(fd: c_int) callconv(.C) c_int {
 }
 
 export fn access(path: [*:0]const u8, amode: c_int) callconv(.C) c_int {
-    trace.log("access '{}' mode=0x{x}", .{trace.fmtStr(path), amode});
+    trace.log("access '{}' mode=0x{x}", .{ trace.fmtStr(path), amode });
     @panic("acces not implemented");
 }
 
@@ -237,7 +237,7 @@ export fn unlink(path: [*:0]const u8) callconv(.C) c_int {
         else => |e| {
             c.errno = @enumToInt(e);
             return -1;
-        }
+        },
     }
 }
 
@@ -308,7 +308,7 @@ export fn clock_gettime(clk_id: c.clockid_t, tp: *os.timespec) callconv(.C) c_in
 }
 
 export fn gettimeofday(tv: *c.timeval, tz: *anyopaque) callconv(.C) c_int {
-    trace.log("gettimeofday tv={*} tz={*}", .{tv, tz});
+    trace.log("gettimeofday tv={*} tz={*}", .{ tv, tz });
     @panic("gettimeofday not implemented");
 }
 
@@ -318,7 +318,6 @@ export fn setitimer(which: c_int, value: *const c.itimerval, avalue: *c.itimerva
     _ = avalue;
     @panic("setitimer not implemented");
 }
-
 
 // --------------------------------------------------------------------------------
 // signal
@@ -334,7 +333,7 @@ export fn sigaction(sig: c_int, act: *const c.struct_sigaction, oact: *c.struct_
 // sys/stat.h
 // --------------------------------------------------------------------------------
 export fn chmod(path: [*:0]const u8, mode: c.mode_t) callconv(.C) c_int {
-    trace.log("chmod '{s}' mode=0x{x}", .{path, mode});
+    trace.log("chmod '{s}' mode=0x{x}", .{ path, mode });
     @panic("chmod not implemented");
 }
 
@@ -403,25 +402,25 @@ export fn tcsetattr(
 // --------------------------------------------------------------------------------
 // strings
 // --------------------------------------------------------------------------------
-export fn strcasecmp(a: [*:0]const u8, b:[*:0]const u8) callconv(.C) c_int {
-    trace.log("strcasecmp {} {}", .{trace.fmtStr(a), trace.fmtStr(b)});
+export fn strcasecmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
+    trace.log("strcasecmp {} {}", .{ trace.fmtStr(a), trace.fmtStr(b) });
     @panic("not impl");
-//    var a_next = a;
-//    var b_next = b;
-//    while (a_next[0] == b_next[0] and a_next[0] != 0) {
-//        a_next += 1;
-//        b_next += 1;
-//    }
-//    const result = @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
-//    trace.log("strcmp return {}", .{result});
-//    return result;
+    //    var a_next = a;
+    //    var b_next = b;
+    //    while (a_next[0] == b_next[0] and a_next[0] != 0) {
+    //        a_next += 1;
+    //        b_next += 1;
+    //    }
+    //    const result = @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
+    //    trace.log("strcmp return {}", .{result});
+    //    return result;
 }
 
 // --------------------------------------------------------------------------------
 // sys/ioctl
 // --------------------------------------------------------------------------------
 export fn _ioctlArgPtr(fd: c_int, request: c_ulong, arg_ptr: *anyopaque) c_int {
-    trace.log("ioctl fd={} request=0x{x} arg={*}", .{fd, request, arg_ptr});
+    trace.log("ioctl fd={} request=0x{x} arg={*}", .{ fd, request, arg_ptr });
     const rc = os.linux.ioctl(fd, @intCast(u32, request), @ptrToInt(arg_ptr));
     switch (os.errno(rc)) {
         .SUCCESS => return @intCast(c_int, rc),
@@ -443,7 +442,9 @@ export fn select(
     timeout: ?*c.timespec,
 ) c_int {
     _ = nfds;
-    _ = readfds; _ = writefds; _ = errorfds;
+    _ = readfds;
+    _ = writefds;
+    _ = errorfds;
     _ = timeout;
     @panic("TODO: implement select");
 }

@@ -33,8 +33,9 @@ pub fn main() !u8 {
     return 0;
 }
 
-
-fn isWhitespace(c: u8) bool { return c == ' '; }
+fn isWhitespace(c: u8) bool {
+    return c == ' ';
+}
 
 fn skipWhitespace(text: []const u8, offset: usize) usize {
     var i = offset;
@@ -58,7 +59,7 @@ fn peel(text: *[]const u8) ?[]const u8 {
         return null;
     }
     const end = toWhitespace(text.*, start + 1);
-    const result = text.*[start .. end];
+    const result = text.*[start..end];
     text.* = text.*[end..];
     return result;
 }
@@ -69,11 +70,11 @@ const ErrorReporter = struct {
     count: u32,
     fn report(self: *ErrorReporter, line_offset: u32, comptime msg: []const u8, args: anytype) void {
         self.count += 1;
-        std.log.err("{s}:{d} " ++ msg, .{self.filename, self.base_line_number + line_offset} ++ args);
+        std.log.err("{s}:{d} " ++ msg, .{ self.filename, self.base_line_number + line_offset } ++ args);
     }
 };
 
-const ReportedError = error { Reported };
+const ReportedError = error{Reported};
 fn parseDefinition(
     allocator: std.mem.Allocator,
     error_reporter: *ErrorReporter,
@@ -85,7 +86,7 @@ fn parseDefinition(
         std.debug.panic("first line not being 'c89', instead is '{s}', not implemented", .{first_line});
     }
     var line_offset: u32 = 1;
-    const def = blk:{
+    const def = blk: {
         const def_line_original = line_it.next() orelse {
             error_reporter.report(line_offset, "definition is missing it's second line", .{});
             return ReportedError.Reported;
@@ -108,11 +109,11 @@ fn parseDefinition(
             const value = std.mem.trimRight(u8, remaining_line[value_start..], " ");
             const def = try allocator.create(Definition);
             def.* = .{
-                .headers = &[_][]const u8 {},
+                .headers = &[_][]const u8{},
                 .def = .{ .define = .{
                     .name = name,
                     .value = value,
-                }},
+                } },
             };
             break :blk def;
         } else {
@@ -121,7 +122,7 @@ fn parseDefinition(
         }
     };
 
-    var headers = std.ArrayListUnmanaged([]const u8) { };
+    var headers = std.ArrayListUnmanaged([]const u8){};
     defer headers.deinit(allocator);
     while (true) {
         line_offset += 1;
@@ -158,14 +159,12 @@ const Parser = struct {
             .allocator = allocator,
             .filename = filename,
             .contents = contents,
-            .definitions = std.ArrayListUnmanaged(*Definition) { },
+            .definitions = std.ArrayListUnmanaged(*Definition){},
         };
     }
     // TODO: deini?
 
-
     fn genHeaders(self: *Parser) !void {
-
         var started: ?struct { ptr: [*]const u8, line_number: u32 } = null;
         var line_it = std.mem.split(u8, self.contents, "\n");
         var line_number: u32 = 0;
@@ -182,7 +181,7 @@ const Parser = struct {
                     started = null;
                 }
             } else {
-                if (started) |_| { } else {
+                if (started) |_| {} else {
                     started = .{ .line_number = line_number, .ptr = line.ptr };
                 }
             }
@@ -193,7 +192,7 @@ const Parser = struct {
     }
 
     fn addDefinition(self: *Parser, line_number: u32, start: [*]const u8, limit: [*]const u8) !void {
-        var error_reporter = ErrorReporter {
+        var error_reporter = ErrorReporter{
             .filename = self.filename,
             .base_line_number = line_number,
             .count = 0,

@@ -158,7 +158,7 @@ pub fn build(b: *std.build.Builder) void {
         }
         {
             const run = b.addRunArtifact(exe);
-            run.addArgs(&.{ "-a" });
+            run.addArgs(&.{"-a"});
             run.addCheck(.{ .expect_stdout_exact = "aflag=1, c_arg='(null)'\n" });
             test_step.dependOn(&run.step);
         }
@@ -218,7 +218,7 @@ fn addTest(
         .target = target,
         .optimize = optimize,
     });
-    exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8 { });
+    exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8{});
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
     exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
     exe.linkLibrary(libc_only_std_static);
@@ -248,10 +248,10 @@ fn addLibcTest(
     const libc_test_step = b.step("libc-test", "run tests from the libc-test project");
 
     // inttypes
-    inline for (.{ "assert", "ctype", "errno", "main", "stdbool", "stddef", "string" } ) |name| {
+    inline for (.{ "assert", "ctype", "errno", "main", "stdbool", "stddef", "string" }) |name| {
         const lib = b.addObject(.{
             .name = "libc-test-api-" ++ name,
-            .root_source_file = .{ .path = b.pathJoin(&.{libc_test_path, "src", "api", name ++ ".c"}) },
+            .root_source_file = .{ .path = b.pathJoin(&.{ libc_test_path, "src", "api", name ++ ".c" }) },
             .target = target,
             .optimize = optimize,
         });
@@ -259,21 +259,21 @@ fn addLibcTest(
         lib.step.dependOn(&libc_test_repo.step);
         libc_test_step.dependOn(&lib.step);
     }
-    const libc_inc_path = b.pathJoin(&.{libc_test_path, "src", "common"});
-    const common_src = &[_][]const u8 {
-        b.pathJoin(&.{libc_test_path, "src", "common", "print.c"}),
+    const libc_inc_path = b.pathJoin(&.{ libc_test_path, "src", "common" });
+    const common_src = &[_][]const u8{
+        b.pathJoin(&.{ libc_test_path, "src", "common", "print.c" }),
     };
 
     // strtol, it seems there might be some disagreement between libc-test/glibc
     // about how strtoul interprets negative numbers, so leaving out strtol for now
-    inline for (.{ "argv", "basename", "clock_gettime", "string" } ) |name| {
+    inline for (.{ "argv", "basename", "clock_gettime", "string" }) |name| {
         const exe = b.addExecutable(.{
             .name = "libc-test-functional-" ++ name,
-            .root_source_file = .{ .path = b.pathJoin(&.{libc_test_path, "src", "functional", name ++ ".c"}) },
+            .root_source_file = .{ .path = b.pathJoin(&.{ libc_test_path, "src", "functional", name ++ ".c" }) },
             .target = target,
             .optimize = optimize,
         });
-        exe.addCSourceFiles(common_src, &[_][]const u8 {});
+        exe.addCSourceFiles(common_src, &[_][]const u8{});
         exe.step.dependOn(&libc_test_repo.step);
         exe.addIncludePath(libc_inc_path);
         exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
@@ -305,7 +305,7 @@ fn addTinyRegexCTests(
     });
 
     const re_step = b.step("re-tests", "run the tiny-regex-c tests");
-    inline for (&[_][]const u8 { "test1", "test3" }) |test_name| {
+    inline for (&[_][]const u8{ "test1", "test3" }) |test_name| {
         const exe = b.addExecutable(.{
             .name = "re" ++ test_name,
             .root_source_file = null,
@@ -316,14 +316,14 @@ fn addTinyRegexCTests(
         exe.step.dependOn(&repo.step);
         const repo_path = repo.getPath(&exe.step);
         var files = std.ArrayList([]const u8).init(b.allocator);
-        const sources = [_][]const u8 {
+        const sources = [_][]const u8{
             "re.c", "tests" ++ std.fs.path.sep_str ++ test_name ++ ".c",
         };
         for (sources) |src| {
-            files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+            files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
         }
 
-        exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+        exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
             "-std=c99",
         });
         exe.addIncludePath(repo_path);
@@ -426,7 +426,7 @@ fn addCmph(
     });
 
     const config_step = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "src", "config.h"}),
+        b.pathJoin(&.{ repo.path, "src", "config.h" }),
         "#define VERSION \"1.0\"",
     );
     config_step.step.dependOn(&repo.step);
@@ -441,17 +441,16 @@ fn addCmph(
     exe.step.dependOn(&config_step.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
-        "main.c", "cmph.c", "hash.c", "chm.c", "bmz.c", "bmz8.c", "brz.c", "fch.c",
-        "bdz.c", "bdz_ph.c", "chd_ph.c", "chd.c", "jenkins_hash.c", "graph.c", "vqueue.c",
-        "buffer_manager.c", "fch_buckets.c", "miller_rabin.c", "compressed_seq.c",
-        "compressed_rank.c", "buffer_entry.c", "select.c", "cmph_structs.c",
+    const sources = [_][]const u8{
+        "main.c",        "cmph.c",         "hash.c",           "chm.c",             "bmz.c",          "bmz8.c",   "brz.c",          "fch.c",
+        "bdz.c",         "bdz_ph.c",       "chd_ph.c",         "chd.c",             "jenkins_hash.c", "graph.c",  "vqueue.c",       "buffer_manager.c",
+        "fch_buckets.c", "miller_rabin.c", "compressed_seq.c", "compressed_rank.c", "buffer_entry.c", "select.c", "cmph_structs.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, "src", src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, "src", src })) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c11",
     });
 
@@ -487,8 +486,7 @@ fn addYacc(
         .branch = null,
     });
 
-    const config_step = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "config.h"}),
+    const config_step = b.addWriteFile(b.pathJoin(&.{ repo.path, "config.h" }),
         \\// for simplicity just don't supported __unused
         \\#define __unused
         \\// for simplicity we're just not supporting noreturn
@@ -501,8 +499,7 @@ fn addYacc(
         \\
     );
     config_step.step.dependOn(&repo.step);
-    const gen_progname_step = b.addWriteFile(
-        b.pathJoin(&.{repo.path, "progname.c"}),
+    const gen_progname_step = b.addWriteFile(b.pathJoin(&.{ repo.path, "progname.c" }),
         \\// workaround __progname not defined, https://github.com/ibara/yacc/pull/1
         \\char *__progname;
         \\
@@ -520,15 +517,15 @@ fn addYacc(
     exe.step.dependOn(&gen_progname_step.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
-        "closure.c", "error.c", "lalr.c", "lr0.c", "main.c", "mkpar.c", "output.c", "reader.c",
+    const sources = [_][]const u8{
+        "closure.c",  "error.c",  "lalr.c",    "lr0.c",      "main.c",     "mkpar.c",    "output.c", "reader.c",
         "skeleton.c", "symtab.c", "verbose.c", "warshall.c", "portable.c", "progname.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c90",
     });
 
@@ -573,13 +570,13 @@ fn addYabfc(
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
+    const sources = [_][]const u8{
         "assembly.c", "elfHelper.c", "helpers.c", "optimize.c", "yabfc.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
     });
 
@@ -627,13 +624,13 @@ fn addSecretGame(
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
-    const sources = [_][]const u8 {
+    const sources = [_][]const u8{
         "main.c", "inter.c", "input.c", "items.c", "rooms.c", "linenoise/linenoise.c",
     };
     for (sources) |src| {
-        files.append(b.pathJoin(&.{repo_path, src})) catch unreachable;
+        files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8 {
+    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c90",
     });
 
