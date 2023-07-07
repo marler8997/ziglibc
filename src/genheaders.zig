@@ -197,7 +197,7 @@ const Parser = struct {
             .base_line_number = line_number,
             .count = 0,
         };
-        const text = start[0 .. @ptrToInt(limit) - @ptrToInt(start)];
+        const text = start[0 .. @intFromPtr(limit) - @intFromPtr(start)];
         if (try parseDefinition(self.allocator, &error_reporter, text)) |def| {
             std.debug.assert(error_reporter.count == 0);
             try self.definitions.append(self.allocator, def);

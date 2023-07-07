@@ -81,7 +81,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
             .target = opt.target,
             .optimize = opt.optimize,
             .version = switch (opt.variant) {
-                .full => .{ .major = 6, .minor = 0 },
+                .full => .{ .major = 6, .minor = 0, .patch = 0 },
                 else => null,
             },
         }),

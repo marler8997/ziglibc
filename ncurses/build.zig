@@ -73,7 +73,7 @@ const NcursesPrepStep = struct {
                 const optional_value = field_it.next();
                 try writer.print("\n#ifndef {s}\n", .{name});
                 if (optional_value) |value| {
-                    const value_offset = @ptrToInt(value.ptr) - @ptrToInt(line.ptr);
+                    const value_offset = @intFromPtr(value.ptr) - @intFromPtr(line.ptr);
                     try writer.print("#define {s} {s}\n", .{ name, line[value_offset..] });
                 } else {
                     try writer.print("#define {s} 0\n", .{name});

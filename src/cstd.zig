@@ -80,7 +80,7 @@ export fn exit(status: c_int) callconv(.C) noreturn {
             global.atexit_funcs.items[i - 1]();
         }
     }
-    std.os.exit(@intCast(u8, status));
+    std.os.exit(@intCast(status));
 }
 
 const ExitFunc = switch (builtin.zig_backend) {
@@ -137,7 +137,7 @@ export fn system(string: ?[*:0]const u8) callconv(.C) c_int {
 /// TODO: this should probably be in the zig std library somewhere.
 const alloc_align = 16;
 
-const alloc_metadata_len = std.mem.alignForward(@sizeOf(usize), alloc_align);
+const alloc_metadata_len = std.mem.alignForward(usize, alloc_align, @sizeOf(usize));
 
 pub export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
     trace.log("malloc {}", .{size});
@@ -149,16 +149,16 @@ pub export fn malloc(size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
             return null;
         },
     };
-    @ptrCast(*usize, buf).* = full_len;
-    const result = @intToPtr([*]align(alloc_align) u8, @ptrToInt(buf.ptr) + alloc_metadata_len);
+    @as(*usize, @ptrCast(buf)).* = full_len;
+    const result = @as([*]align(alloc_align) u8, @ptrFromInt(@intFromPtr(buf.ptr) + alloc_metadata_len));
     trace.log("malloc return {*}", .{result});
     return result;
 }
 
 fn getGpaBuf(ptr: [*]u8) []align(alloc_align) u8 {
-    const start = @ptrToInt(ptr) - alloc_metadata_len;
-    const len = @intToPtr(*usize, start).*;
-    return @alignCast(alloc_align, @intToPtr([*]u8, start)[0..len]);
+    const start = @intFromPtr(ptr) - alloc_metadata_len;
+    const len = @as(*usize, @ptrFromInt(start)).*;
+    return @alignCast(@as([*]u8, @ptrFromInt(start))[0..len]);
 }
 
 export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]align(alloc_align) u8 {
@@ -175,7 +175,7 @@ export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]
 
     const gpa_size = alloc_metadata_len + size;
     if (global.gpa.allocator().rawResize(gpa_buf, std.math.log2(alloc_align), gpa_size, @returnAddress())) {
-        @ptrCast(*usize, gpa_buf.ptr).* = gpa_size;
+        @as(*usize, @ptrCast(gpa_buf.ptr)).* = gpa_size;
         trace.log("realloc return {*}", .{ptr});
         return ptr;
     }
@@ -190,8 +190,8 @@ export fn realloc(ptr: ?[*]align(alloc_align) u8, size: usize) callconv(.C) ?[*]
             return null;
         },
     };
-    @ptrCast(*usize, new_buf.ptr).* = gpa_size;
-    const result = @intToPtr([*]align(alloc_align) u8, @ptrToInt(new_buf.ptr) + alloc_metadata_len);
+    @as(*usize, @ptrCast(new_buf.ptr)).* = gpa_size;
+    const result = @as([*]align(alloc_align) u8, @ptrFromInt(@intFromPtr(new_buf.ptr) + alloc_metadata_len));
     trace.log("realloc return {*}", .{result});
     return result;
 }
@@ -219,7 +219,7 @@ export fn srand(seed: c_uint) callconv(.C) void {
 }
 
 export fn rand() callconv(.C) c_int {
-    return @bitCast(c_int, @intCast(c_uint, global.rand.random().int(std.math.IntFittingRange(0, c.RAND_MAX))));
+    return @as(c_int, @bitCast(@as(c_uint, @intCast(global.rand.random().int(std.math.IntFittingRange(0, c.RAND_MAX))))));
 }
 
 export fn abs(j: c_int) callconv(.C) c_int {
@@ -259,7 +259,7 @@ export fn strcmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
         a_next += 1;
         b_next += 1;
     }
-    const result = @intCast(c_int, a_next[0]) -| @intCast(c_int, b_next[0]);
+    const result = @as(c_int, @intCast(a_next[0])) -| @as(c_int, @intCast(b_next[0]));
     trace.log("strcmp return {}", .{result});
     return result;
 }
@@ -270,7 +270,7 @@ export fn strncmp(a: [*:0]const u8, b: [*:0]const u8, n: usize) callconv(.C) c_i
     while (a[i] == b[i] and a[0] != 0) : (i += 1) {
         if (i == n - 1) return 0;
     }
-    return @intCast(c_int, a[i]) -| @intCast(c_int, b[i]);
+    return @as(c_int, @intCast(a[i])) -| @as(c_int, @intCast(b[i]));
 }
 
 export fn strcoll(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) c_int {
@@ -321,7 +321,7 @@ export fn strstr(s1: [*:0]const u8, s2: [*:0]const u8) callconv(.C) ?[*:0]const 
 export fn strcpy(s1: [*]u8, s2: [*:0]const u8) callconv(.C) [*:0]u8 {
     trace.log("strcpy {*} {*}", .{ s1, s2 });
     @memcpy(s1[0 .. std.mem.len(s2) + 1], s2);
-    return @ptrCast([*:0]u8, s1); // TODO: use std.meta.assumeSentinel if it's brought back
+    return @as([*:0]u8, @ptrCast(s1)); // TODO: use std.meta.assumeSentinel if it's brought back
 }
 
 // TODO: find out which standard this function comes from
@@ -444,7 +444,7 @@ fn strto(comptime T: type, str: [*:0]const u8, optional_endptr: ?*[*:0]const u8,
             if (optional_base == 16 and next[0] == '0' and (next[1] == 'x' or next[1] == 'X')) {
                 next += 2;
             }
-            break :blk @intCast(u8, optional_base);
+            break :blk @as(u8, @intCast(optional_base));
         }
         if (next[0] == '0') {
             if (next[1] == 'x' or next[1] == 'X') {
@@ -503,14 +503,14 @@ fn strto(comptime T: type, str: [*:0]const u8, optional_endptr: ?*[*:0]const u8,
     if (next == digit_start) {
         errno = c.EINVAL; // TODO: is this right?
     } else {
-        trace.log("strto str='{s}' result={}", .{ start[0 .. @ptrToInt(next) - @ptrToInt(start)], x });
+        trace.log("strto str='{s}' result={}", .{ start[0 .. @intFromPtr(next) - @intFromPtr(start)], x });
     }
     return x;
 }
 
 export fn strtod(nptr: [*:0]const u8, endptr: ?*[*:0]const u8) callconv(.C) f64 {
     trace.log("strtod {}", .{trace.fmtStr(nptr)});
-    const str_len: usize = if (endptr) |e| @ptrToInt(e.*) - @ptrToInt(nptr) else std.mem.len(nptr);
+    const str_len: usize = if (endptr) |e| @intFromPtr(e.*) - @intFromPtr(nptr) else std.mem.len(nptr);
     if (str_len == 0) {
         return 0;
     }
@@ -545,7 +545,7 @@ export fn strtoull(nptr: [*:0]const u8, endptr: ?*[*:0]u8, base: c_int) callconv
 export fn strerror(errnum: c_int) callconv(.C) [*:0]const u8 {
     std.log.warn("sterror (num={}) not implemented", .{errnum});
     _ = std.fmt.bufPrint(&global.tmp_strerror_buffer, "{}", .{errnum}) catch @panic("BUG");
-    return @ptrCast([*:0]const u8, &global.tmp_strerror_buffer); // TODO: use std.meta.assumeSentinel if it's brought back
+    return @as([*:0]const u8, @ptrCast(&global.tmp_strerror_buffer)); // TODO: use std.meta.assumeSentinel if it's brought back
 }
 
 // --------------------------------------------------------------------------------
@@ -570,16 +570,16 @@ export fn signal(sig: c_int, func: SignalFn) callconv(.C) ?SignalFn {
         };
         var old_action: std.os.Sigaction = undefined;
         switch (std.os.errno(std.os.linux.sigaction(
-            @intCast(u6, sig),
+            @as(u6, @intCast(sig)),
             &action,
             &old_action,
         ))) {
             .SUCCESS => return old_action.handler.handler,
             else => |e| {
-                errno = @enumToInt(e);
+                errno = @intFromEnum(e);
                 // translate-c having a hard time with this one
                 //return c.SIG_ERR;
-                return @intToPtr(?SignalFn, @bitCast(usize, @as(isize, -1)));
+                return @as(?SignalFn, @ptrFromInt(@as(usize, @bitCast(@as(isize, -1)))));
             },
         }
     }
@@ -620,7 +620,7 @@ const global = struct {
         @panic("out of file handles");
     }
     fn releaseFile(file: *c.FILE) void {
-        const i = (@ptrToInt(file) - @ptrToInt(&files[0])) / @sizeOf(usize);
+        const i = (@intFromPtr(file) - @intFromPtr(&files[0])) / @sizeOf(usize);
         if (!@atomicRmw(bool, &files_reserved[i], .Xchg, false, .SeqCst)) {
             std.debug.panic("released FILE (i={} ptr={*}) that was not reserved", .{ i, file });
         }
@@ -708,7 +708,7 @@ export fn getc(stream: *c.FILE) callconv(.C) c_int {
         trace.log("getc return {}", .{buf[0]});
         return buf[0];
     }
-    stream.errno = if (rc == 0) 0 else @enumToInt(std.os.errno(rc));
+    stream.errno = if (rc == 0) 0 else @intFromEnum(std.os.errno(rc));
     trace.log("getc return EOF, errno={}", .{stream.errno});
     return c.EOF;
 }
@@ -732,7 +732,7 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
     // TODO: should I check stream.eof here?
 
     if (builtin.os.tag == .windows) {
-        const actual_read_len = @intCast(u32, std.math.min(@as(u32, std.math.maxInt(u32)), size));
+        const actual_read_len = @as(u32, @intCast(@min(@as(u32, std.math.maxInt(u32)), size)));
         while (true) {
             var amt_read: u32 = undefined;
             // TODO: is stream.fd.? right?
@@ -744,7 +744,7 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
                     else => |err| std.debug.panic("ReadFile unexpected error {}", .{err}),
                 }
             }
-            return @intCast(usize, amt_read);
+            return @as(usize, @intCast(amt_read));
         }
     }
 
@@ -754,16 +754,16 @@ export fn _fread_buf(ptr: [*]u8, size: usize, stream: *c.FILE) callconv(.C) usiz
         .macos, .ios, .watchos, .tvos => std.math.maxInt(i32),
         else => std.math.maxInt(isize),
     };
-    const adjusted_len = std.math.min(max_count, size);
+    const adjusted_len = @min(max_count, size);
 
     const rc = std.os.system.read(stream.fd, ptr, adjusted_len);
     switch (std.os.errno(rc)) {
         .SUCCESS => {
             if (rc == 0) stream.eof = 1;
-            return @intCast(usize, rc);
+            return @as(usize, @intCast(rc));
         },
         else => |e| {
-            errno = @enumToInt(e);
+            errno = @intFromEnum(e);
             return 0;
         },
     }
@@ -815,7 +815,7 @@ pub export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?
         );
         if (fd == std.os.windows.INVALID_HANDLE_VALUE) {
             // TODO: do I need to set errno?
-            errno = @enumToInt(std.os.windows.kernel32.GetLastError());
+            errno = @intFromEnum(std.os.windows.kernel32.GetLastError());
             return null;
         }
         const file = global.reserveFile();
@@ -840,13 +840,13 @@ pub export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?
     switch (std.os.errno(fd)) {
         .SUCCESS => {},
         else => |e| {
-            errno = @enumToInt(e);
+            errno = @intFromEnum(e);
             trace.log("fopen return null (errno={})", .{errno});
             return null;
         },
     }
     const file = global.reserveFile();
-    file.fd = @intCast(c_int, fd);
+    file.fd = @as(c_int, @intCast(fd));
     file.eof = 0;
     return file;
 }
@@ -881,11 +881,11 @@ export fn fseek(stream: *c.FILE, offset: c_long, whence: c_int) callconv(.C) c_i
     // return syscall3(.lseek, @bitCast(usize, @as(isize, fd)), @bitCast(usize, offset), whence);
     //                                                                   ^
     if (@sizeOf(usize) == 4) @panic("not implemented");
-    const rc = std.os.system.lseek(stream.fd, @intCast(i64, offset), @intCast(usize, whence));
+    const rc = std.os.system.lseek(stream.fd, @as(i64, @intCast(offset)), @as(usize, @intCast(whence)));
     switch (std.os.errno(rc)) {
         .SUCCESS => return 0,
         else => |e| {
-            errno = @enumToInt(e);
+            errno = @intFromEnum(e);
             return -1;
         },
     }
@@ -916,16 +916,16 @@ export fn fputc(character: c_int, stream: *c.FILE) callconv(.C) c_int {
     if (builtin.os.tag == .windows) {
         @panic("fputc not implemented");
     }
-    const buf = [_]u8{@intCast(u8, 0xff & character)};
+    const buf = [_]u8{@as(u8, @intCast(0xff & character))};
     const written = std.os.system.write(stream.fd, &buf, 1);
     switch (std.os.errno(written)) {
         .SUCCESS => {
             if (written == 1) return character;
-            stream.errno = @enumToInt(std.os.E.IO);
+            stream.errno = @intFromEnum(std.os.E.IO);
             return c.EOF;
         },
         else => |e| {
-            stream.errno = @enumToInt(e);
+            stream.errno = @intFromEnum(e);
             return c.EOF;
         },
     }
@@ -936,7 +936,7 @@ export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.
     if (builtin.os.tag == .windows) {
         var written: usize = undefined;
         windows.writeAll(stream.fd.?, ptr[0..size], &written) catch {
-            stream.errno = @enumToInt(std.os.windows.kernel32.GetLastError());
+            stream.errno = @intFromEnum(std.os.windows.kernel32.GetLastError());
         };
         return written;
     }
@@ -944,12 +944,12 @@ export fn _fwrite_buf(ptr: [*]const u8, size: usize, stream: *c.FILE) callconv(.
     switch (std.os.errno(written)) {
         .SUCCESS => {
             if (written != size) {
-                stream.errno = @enumToInt(std.os.E.IO);
+                stream.errno = @intFromEnum(std.os.E.IO);
             }
             return written;
         },
         else => |e| {
-            stream.errno = @enumToInt(e);
+            stream.errno = @intFromEnum(e);
             return 0;
         },
     }
@@ -972,7 +972,7 @@ export fn fflush(stream: ?*c.FILE) callconv(.C) c_int {
 
 export fn putchar(ch: c_int) callconv(.C) c_int {
     trace.log("putchar {}", .{ch});
-    const buf = [_]u8{@intCast(u8, ch & 0xff)};
+    const buf = [_]u8{@as(u8, @intCast(ch & 0xff))};
     return if (1 == _fwrite_buf(&buf, 1, stdout)) buf[0] else c.EOF;
 }
 
@@ -1024,7 +1024,7 @@ export fn fgets(s: [*]u8, n: c_int, stream: *c.FILE) callconv(.C) ?[*]u8 {
             }
             return null;
         }
-        s[total_read] = @intCast(u8, result);
+        s[total_read] = @as(u8, @intCast(result));
         if (s[total_read] == '\n') {
             s[total_read + 1] = 0;
             return s;
@@ -1127,7 +1127,7 @@ export fn frexp(value: f32, exp: *c_int) callconv(.C) f64 {
 
 export fn ldexp(x: f64, exp: c_int) callconv(.C) f64 {
     // TODO: look into error handling to match C spec
-    return std.math.ldexp(x, @intCast(i32, exp));
+    return std.math.ldexp(x, @as(i32, @intCast(exp)));
 }
 
 export fn pow(x: f64, y: f64) callconv(.C) f64 {
@@ -1170,7 +1170,7 @@ export fn mktime(timeptr: *c.tm) callconv(.C) c.time_t {
 export fn time(timer: ?*c.time_t) callconv(.C) c.time_t {
     trace.log("time {*}", .{timer});
     const now_zig = std.time.timestamp();
-    const now = @intCast(c.time_t, std.math.boolMask(c.time_t, true) & now_zig);
+    const now = @as(c.time_t, @intCast(std.math.boolMask(c.time_t, true) & now_zig));
     if (timer) |_| {
         timer.?.* = now;
     }
@@ -1201,7 +1201,7 @@ export fn strftime(s: [*]u8, maxsize: usize, format: [*:0]const u8, timeptr: *co
 // --------------------------------------------------------------------------------
 export fn isalnum(char: c_int) callconv(.C) c_int {
     trace.log("isalnum {}", .{char});
-    return @boolToInt(std.ascii.isAlphanumeric(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isAlphanumeric(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn toupper(char: c_int) callconv(.C) c_int {
@@ -1216,53 +1216,53 @@ export fn tolower(char: c_int) callconv(.C) c_int {
 
 export fn isspace(char: c_int) callconv(.C) c_int {
     trace.log("isspace {}", .{char});
-    return @boolToInt(std.ascii.isWhitespace(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isWhitespace(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isxdigit(char: c_int) callconv(.C) c_int {
     trace.log("isxdigit {}", .{char});
-    return @boolToInt(std.ascii.isHex(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isHex(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn iscntrl(char: c_int) callconv(.C) c_int {
     trace.log("iscntrl {}", .{char});
-    return @boolToInt(std.ascii.isControl(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isControl(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isdigit(char: c_int) callconv(.C) c_int {
     trace.log("isdigit {}", .{char});
-    return @boolToInt(std.ascii.isDigit(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isDigit(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isalpha(char: c_int) callconv(.C) c_int {
     trace.log("isalhpa {}", .{char});
-    return @boolToInt(std.ascii.isAlphabetic(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isAlphabetic(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isgraph(char: c_int) callconv(.C) c_int {
     trace.log("isgraph {}", .{char});
-    return @boolToInt(std.ascii.isPrint(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isPrint(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn islower(char: c_int) callconv(.C) c_int {
     trace.log("islower {}", .{char});
-    return @boolToInt(std.ascii.isLower(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isLower(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn isupper(char: c_int) callconv(.C) c_int {
     trace.log("isupper {}", .{char});
-    return @boolToInt(std.ascii.isUpper(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isUpper(std.math.cast(u8, char) orelse return 0));
 }
 
 export fn ispunct(char: c_int) callconv(.C) c_int {
     trace.log("ispunct {}", .{char});
     const c_u8 = std.math.cast(u8, char) orelse return 0;
-    return @boolToInt(std.ascii.isPrint(c_u8) and !std.ascii.isAlphanumeric(c_u8));
+    return @intFromBool(std.ascii.isPrint(c_u8) and !std.ascii.isAlphanumeric(c_u8));
 }
 
 export fn isprint(char: c_int) callconv(.C) c_int {
     trace.log("isprint {}", .{char});
-    return @boolToInt(std.ascii.isPrint(std.math.cast(u8, char) orelse return 0));
+    return @intFromBool(std.ascii.isPrint(std.math.cast(u8, char) orelse return 0));
 }
 
 // --------------------------------------------------------------------------------

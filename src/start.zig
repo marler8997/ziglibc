@@ -10,18 +10,18 @@ pub fn main() u8 {
     const args: [*:null]?[*:0]u8 = blk: {
         if (builtin.os.tag == .windows) {
             const args = windowsArgsAlloc();
-            argc = @intCast(c_int, args.len);
+            argc = @as(c_int, args.len);
             break :blk args.ptr;
         }
-        argc = @intCast(c_int, std.os.argv.len);
-        break :blk @ptrCast([*:null]?[*:0]u8, std.os.argv.ptr);
+        argc = @as(c_int, @intCast(std.os.argv.len));
+        break :blk @as([*:null]?[*:0]u8, @ptrCast(std.os.argv.ptr));
     };
 
     var result = c.main(argc, args);
     if (result != 0) {
         while ((result & 0xff == 0)) result = result >> 8;
     }
-    return @intCast(u8, result & 0xff);
+    return @as(u8, @intCast(result & 0xff));
 }
 
 // TODO: I'm pretty sure this could be more memory efficient

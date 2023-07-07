@@ -44,7 +44,7 @@ export fn getopt(argc: c_int, argv: [*][*:0]u8, optstring: [*:0]const u8) callco
         trace.log("getopt return -1", .{});
         return -1;
     }
-    const arg = argv[@intCast(usize, global.optind)];
+    const arg = argv[@as(usize, @intCast(global.optind))];
     if (arg[0] != '-') {
         // TODO: not sure if this is what we're supposed to do
         //       my guess is we have to take this non-option
@@ -67,13 +67,13 @@ export fn getopt(argc: c_int, argv: [*][*:0]u8, optstring: [*:0]const u8) callco
     if (takes_arg) {
         const is_optional = result[2] == ':';
         if (is_optional) @panic("optional args not implemented");
-        global.optarg = argv[@intCast(usize, global.optind)];
+        global.optarg = argv[@as(usize, @intCast(global.optind))];
         if (global.optind >= argc or global.optarg[0] == '-') {
             std.debug.panic("TODO: handle missing arg for option '{}", .{arg[1]});
         }
         global.optind += 1;
     }
-    return @intCast(c_int, arg[1]);
+    return @as(c_int, arg[1]);
 }
 
 export fn write(fd: c_int, buf: [*]const u8, nbyte: usize) callconv(.C) isize {
@@ -82,9 +82,9 @@ export fn write(fd: c_int, buf: [*]const u8, nbyte: usize) callconv(.C) isize {
     }
     const rc = os.system.write(fd, buf, nbyte);
     switch (os.errno(rc)) {
-        .SUCCESS => return @intCast(isize, rc),
+        .SUCCESS => return @as(isize, @intCast(rc)),
         else => |e| {
-            c.errno = @enumToInt(e);
+            c.errno = @intFromEnum(e);
             return -1;
         },
     }
@@ -94,9 +94,9 @@ export fn read(fd: c_int, buf: [*]u8, len: usize) callconv(.C) isize {
     trace.log("read fd={} buf={*} len={}", .{ fd, buf, len });
     const rc = os.linux.read(fd, buf, len);
     switch (os.errno(rc)) {
-        .SUCCESS => return @intCast(isize, rc),
+        .SUCCESS => return @as(isize, @intCast(rc)),
         else => |e| {
-            c.errno = @enumToInt(e);
+            c.errno = @intFromEnum(e);
             return -1;
         },
     }
@@ -108,11 +108,11 @@ export fn read(fd: c_int, buf: [*]u8, len: usize) callconv(.C) isize {
 export fn strdup(s: [*:0]const u8) callconv(.C) ?[*:0]u8 {
     trace.log("strdup '{}'", .{trace.fmtStr(s)});
     const len = c.strlen(s);
-    const optional_new_s = @ptrCast(?[*]u8, c.malloc(len + 1));
+    const optional_new_s = @as(?[*]u8, @ptrCast(c.malloc(len + 1)));
     if (optional_new_s) |new_s| {
         _ = c.strcpy(new_s, s);
     }
-    return @ptrCast([*:0]u8, optional_new_s); // TODO: use std.meta.assumeSentinel if it's brought back
+    return @as([*:0]u8, @ptrCast(optional_new_s)); // TODO: use std.meta.assumeSentinel if it's brought back
 }
 
 // --------------------------------------------------------------------------------
@@ -134,8 +134,8 @@ export fn mkostemp(template: [*:0]u8, suffixlen: c_int, flags: c_int) callconv(.
             c.errno = c.EINVAL;
             return -1;
         }
-        const rand_part_off = len - @intCast(usize, suffixlen) - 6;
-        break :blk @ptrCast(*[6]u8, template + rand_part_off);
+        const rand_part_off = len - @as(usize, @intCast(suffixlen)) - 6;
+        break :blk @as(*[6]u8, @ptrCast(template + rand_part_off));
     };
 
     if (!std.mem.eql(u8, rand_part, "XXXXXX")) {
@@ -147,13 +147,13 @@ export fn mkostemp(template: [*:0]u8, suffixlen: c_int, flags: c_int) callconv(.
     var attempt: u32 = 0;
     while (true) : (attempt += 1) {
         randomizeTempFilename(rand_part);
-        const fd = os.system.open(template, @intCast(u32, flags | os.O.RDWR | os.O.CREAT | os.O.EXCL), 0o600);
+        const fd = os.system.open(template, @as(u32, @intCast(flags | os.O.RDWR | os.O.CREAT | os.O.EXCL)), 0o600);
         switch (os.errno(fd)) {
-            .SUCCESS => return @intCast(c_int, fd),
+            .SUCCESS => return @as(c_int, @intCast(fd)),
             else => |e| {
                 if (attempt >= max_attempts) {
                     // TODO: should we restore rand_part back to XXXXXX?
-                    c.errno = @enumToInt(e);
+                    c.errno = @intFromEnum(e);
                     return -1;
                 }
             },
@@ -172,7 +172,7 @@ fn randomizeTempFilename(slice: *[6]u8) void {
     var randoms: [6]u8 = undefined;
     {
         const timestamp = std.time.nanoTimestamp();
-        var prng = std.rand.DefaultPrng.init(@intCast(u64, std.math.maxInt(u64) & timestamp));
+        var prng = std.rand.DefaultPrng.init(@as(u64, @intCast(std.math.maxInt(u64) & timestamp)));
         prng.random().bytes(&randoms);
     }
     var i: usize = 0;
@@ -187,7 +187,7 @@ fn randomizeTempFilename(slice: *[6]u8) void {
 export fn fileno(stream: *c.FILE) callconv(.C) c_int {
     if (builtin.os.tag == .windows) {
         // this probably isn't right, but might be fine for an initial implementation
-        return @intCast(c_int, @ptrToInt(stream.fd));
+        return @as(c_int, @intCast(@intFromPtr(stream.fd)));
     }
     @panic("fileno not implemented");
 }
@@ -235,7 +235,7 @@ export fn unlink(path: [*:0]const u8) callconv(.C) c_int {
     switch (os.errno(os.system.unlink(path))) {
         .SUCCESS => return 0,
         else => |e| {
-            c.errno = @enumToInt(e);
+            c.errno = @intFromEnum(e);
             return -1;
         },
     }
@@ -243,7 +243,7 @@ export fn unlink(path: [*:0]const u8) callconv(.C) c_int {
 
 export fn _exit(status: c_int) callconv(.C) noreturn {
     if (builtin.os.tag == .windows) {
-        os.windows.kernel32.ExitProcess(@bitCast(c_uint, status));
+        os.windows.kernel32.ExitProcess(@as(c_uint, @bitCast(status)));
     }
     if (builtin.os.tag == .wasi) {
         os.wasi.proc_exit(status);
@@ -260,7 +260,7 @@ export fn isatty(fd: c_int) callconv(.C) c_int {
         @panic("isatty not supported on windows (yet?)");
 
     var size: c.winsize = undefined;
-    switch (os.errno(os.system.ioctl(fd, c.TIOCGWINSZ, @ptrToInt(&size)))) {
+    switch (os.errno(os.system.ioctl(fd, c.TIOCGWINSZ, @intFromPtr(&size)))) {
         .SUCCESS => return 1,
         .BADF => {
             c.errno = c.ENOTTY;
@@ -289,8 +289,8 @@ export fn clock_gettime(clk_id: c.clockid_t, tp: *os.timespec) callconv(.C) c_in
             const ft64 = (@as(u64, ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
             const ft_per_s = std.time.ns_per_s / 100;
             tp.* = .{
-                .tv_sec = @intCast(i64, ft64 / ft_per_s) + std.time.epoch.windows,
-                .tv_nsec = @intCast(c_long, ft64 % ft_per_s) * 100,
+                .tv_sec = @as(i64, @intCast(ft64 / ft_per_s)) + std.time.epoch.windows,
+                .tv_nsec = @as(c_long, @intCast(ft64 % ft_per_s)) * 100,
             };
             return 0;
         }
@@ -301,7 +301,7 @@ export fn clock_gettime(clk_id: c.clockid_t, tp: *os.timespec) callconv(.C) c_in
     switch (os.errno(os.system.clock_gettime(clk_id, tp))) {
         .SUCCESS => return 0,
         else => |e| {
-            c.errno = @enumToInt(e);
+            c.errno = @intFromEnum(e);
             return -1;
         },
     }
@@ -345,12 +345,12 @@ export fn fstat(fd: c_int, buf: *c.struct_stat) c_int {
 
 export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
     trace.log("umask 0x{x}", .{mode});
-    const old_mode = os.linux.syscall1(.umask, @intCast(usize, mode));
+    const old_mode = os.linux.syscall1(.umask, @as(usize, @intCast(mode)));
     switch (os.errno(old_mode)) {
         .SUCCESS => {},
         else => |e| std.debug.panic("umask syscall should never fail but got '{s}'", .{@tagName(e)}),
     }
-    return @intCast(c.mode_t, old_mode);
+    return @as(c.mode_t, @intCast(old_mode));
 }
 
 // --------------------------------------------------------------------------------
@@ -358,15 +358,15 @@ export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
 // --------------------------------------------------------------------------------
 export fn basename(path: ?[*:0]u8) callconv(.C) [*:0]u8 {
     trace.log("basename {}", .{trace.fmtStr(path)});
-    const path_slice = std.mem.span(path orelse return @intToPtr([*:0]u8, @ptrToInt(".")));
+    const path_slice = std.mem.span(path orelse return @as([*:0]u8, @ptrFromInt(@intFromPtr("."))));
     const name = std.fs.path.basename(path_slice);
-    const mut_ptr = @intToPtr([*:0]u8, @ptrToInt(name.ptr));
+    const mut_ptr = @as([*:0]u8, @ptrFromInt(@intFromPtr(name.ptr)));
     if (name.len == 0) {
         if (path_slice.ptr[0] == '/') {
             path_slice.ptr[1] = 0;
             return path_slice.ptr;
         }
-        return @intToPtr([*:0]u8, @ptrToInt("."));
+        return @as([*:0]u8, @ptrFromInt(@intFromPtr(".")));
     }
     if (mut_ptr[name.len] != 0) mut_ptr[name.len] = 0;
     return mut_ptr;
@@ -379,7 +379,7 @@ export fn tcgetattr(fd: c_int, ios: *os.linux.termios) callconv(.C) c_int {
     switch (os.errno(os.linux.tcgetattr(fd, ios))) {
         .SUCCESS => return 0,
         else => |errno| {
-            c.errno = @enumToInt(errno);
+            c.errno = @intFromEnum(errno);
             return -1;
         },
     }
@@ -390,10 +390,10 @@ export fn tcsetattr(
     optional_actions: c_int,
     ios: *const os.linux.termios,
 ) callconv(.C) c_int {
-    switch (os.errno(os.linux.tcsetattr(fd, @intToEnum(os.linux.TCSA, optional_actions), ios))) {
+    switch (os.errno(os.linux.tcsetattr(fd, @as(os.linux.TCSA, @enumFromInt(optional_actions)), ios))) {
         .SUCCESS => return 0,
         else => |errno| {
-            c.errno = @enumToInt(errno);
+            c.errno = @intFromEnum(errno);
             return -1;
         },
     }
@@ -421,11 +421,11 @@ export fn strcasecmp(a: [*:0]const u8, b: [*:0]const u8) callconv(.C) c_int {
 // --------------------------------------------------------------------------------
 export fn _ioctlArgPtr(fd: c_int, request: c_ulong, arg_ptr: *anyopaque) c_int {
     trace.log("ioctl fd={} request=0x{x} arg={*}", .{ fd, request, arg_ptr });
-    const rc = os.linux.ioctl(fd, @intCast(u32, request), @ptrToInt(arg_ptr));
+    const rc = os.linux.ioctl(fd, @as(u32, @intCast(request)), @intFromPtr(arg_ptr));
     switch (os.errno(rc)) {
-        .SUCCESS => return @intCast(c_int, rc),
+        .SUCCESS => return @as(c_int, @intCast(rc)),
         else => |errno| {
-            c.errno = @enumToInt(errno);
+            c.errno = @intFromEnum(errno);
             return -1;
         },
     }

@@ -37,7 +37,7 @@ const FmtStr = struct {
         if (s.len > max_str_len) {
             return .{ .ptr_opt = s.ptr, .len = .truncated };
         }
-        return .{ .ptr_opt = s.ptr, .len = .{ .len = @intCast(u8, s.len) } };
+        return .{ .ptr_opt = s.ptr, .len = .{ .len = @as(u8, s.len) } };
     }
 
     pub fn initSentinel(s: [*:0]const u8) FmtStr {

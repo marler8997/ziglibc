@@ -47,7 +47,7 @@ export fn __libc_start_main(
     if (result != 0) {
         while ((result & 0xff == 0)) result = result >> 8;
     }
-    std.os.exit(@intCast(u8, result & 0xff));
+    std.os.exit(@as(u8, @intCast(result & 0xff)));
 }
 
 export fn __tls_get_addr(ptr: *usize) callconv(.C) *anyopaque {
