@@ -243,6 +243,7 @@ fn addLibcTest(
         .url = "git://nsz.repo.hu:49100/repo/libc-test",
         .sha = "b7ec467969a53756258778fa7d9b045f912d1c93",
         .branch = null,
+        .fetch_enabled = true,
     });
     const libc_test_path = libc_test_repo.path;
     const libc_test_step = b.step("libc-test", "run tests from the libc-test project");
@@ -302,6 +303,7 @@ fn addTinyRegexCTests(
         .url = "https://github.com/marler8997/tiny-regex-c",
         .sha = "95ef2ad35d36783d789b0ade3178b30a942f085c",
         .branch = "nocompile",
+        .fetch_enabled = true,
     });
 
     const re_step = b.step("re-tests", "run the tiny-regex-c tests");
@@ -358,6 +360,7 @@ fn addLua(
         .url = "https://github.com/lua/lua",
         .sha = "5d708c3f9cae12820e415d4f89c9eacbe2ab964b",
         .branch = "v5.4.4",
+        .fetch_enabled = true,
     });
     const lua_exe = b.addExecutable(.{
         .name = "lua",
@@ -365,7 +368,11 @@ fn addLua(
         .optimize = optimize,
     });
     lua_exe.step.dependOn(&lua_repo.step);
-    const install = installArtifact(b, lua_exe);
+    const install = b.addInstallArtifact(lua_exe);
+    // doesn't compile for windows for some reason
+    if (target.getOs().tag != .windows) {
+        b.getInstallStep().dependOn(&install.step);
+    }
     const lua_repo_path = lua_repo.getPath(&lua_exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
     files.append(b.pathJoin(&.{ lua_repo_path, "lua.c" })) catch unreachable;
@@ -423,6 +430,7 @@ fn addCmph(
         .url = "https://github.com/bonitao/cmph",
         .sha = "abd5e1e17e4d51b3e24459ab9089dc0522846d0d",
         .branch = null,
+        .fetch_enabled = true,
     });
 
     const config_step = b.addWriteFile(
@@ -484,6 +492,7 @@ fn addYacc(
         .url = "https://github.com/ibara/yacc",
         .sha = "1a4138ce2385ec676c6d374245fda5a9cd2fbee2",
         .branch = null,
+        .fetch_enabled = true,
     });
 
     const config_step = b.addWriteFile(b.pathJoin(&.{ repo.path, "config.h" }),
@@ -559,6 +568,7 @@ fn addYabfc(
         .url = "https://github.com/julianneswinoga/yabfc",
         .sha = "a789be25a0918d330b7a4de12db0d33e0785f244",
         .branch = null,
+        .fetch_enabled = true,
     });
 
     const exe = b.addExecutable(.{
@@ -613,6 +623,7 @@ fn addSecretGame(
         .url = "https://github.com/ethinethin/Secret",
         .sha = "8ec8442f84f8bed2cb3985455e7af4d1ce605401",
         .branch = null,
+        .fetch_enabled = true,
     });
 
     const exe = b.addExecutable(.{

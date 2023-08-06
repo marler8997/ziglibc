@@ -217,7 +217,10 @@ export fn fdopen(fd: c_int, mode: [*:0]const u8) callconv(.C) ?*c.FILE {
 // --------------------------------------------------------------------------------
 // unistd
 // --------------------------------------------------------------------------------
-export fn close(fd: c_int) callconv(.C) c_int {
+comptime {
+    if (builtin.os.tag != .windows) @export(close, .{ .name = "close" });
+}
+fn close(fd: c_int) callconv(.C) c_int {
     trace.log("close {}", .{fd});
     std.os.close(fd);
     return 0;

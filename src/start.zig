@@ -10,7 +10,7 @@ pub fn main() u8 {
     const args: [*:null]?[*:0]u8 = blk: {
         if (builtin.os.tag == .windows) {
             const args = windowsArgsAlloc();
-            argc = @as(c_int, args.len);
+            argc = @intCast(args.len);
             break :blk args.ptr;
         }
         argc = @as(c_int, @intCast(std.os.argv.len));
