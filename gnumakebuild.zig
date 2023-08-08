@@ -73,7 +73,7 @@ pub fn addGnuMake(
         .target = target,
         .optimize = optimize,
     });
-    const install = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe, .{});
     exe.step.dependOn(&repo.step);
     exe.step.dependOn(config_step);
     const repo_path = repo.getPath(&exe.step);
@@ -82,7 +82,7 @@ pub fn addGnuMake(
         files.append(b.pathJoin(&.{ repo_path, "src", src })) catch unreachable;
     }
 
-    exe.addIncludePath(b.pathJoin(&.{ repo_path, "src" }));
+    exe.addIncludePath(.{ .path = b.pathJoin(&.{ repo_path, "src" }) });
     exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
         "-DHAVE_CONFIG_H",
@@ -104,10 +104,10 @@ pub fn addGnuMake(
         //"-Wlogical-op", "-Wformat-signedness", "-Wduplicated-cond",
     });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
-    exe.addIncludePath("inc/gnu");
-    exe.addIncludePath("inc/alloca");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
+    exe.addIncludePath(.{ .path = "inc/gnu" });
+    exe.addIncludePath(.{ .path = "inc/alloca" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);

@@ -1,6 +1,6 @@
 const std = @import("std");
-const build = std.build;
-const LibExeObjStep = build.LibExeObjStep;
+const build = std.Build;
+const CompileStep = build.Step.Compile;
 
 pub const LinkKind = enum { static, shared };
 pub const LibVariant = enum {
@@ -23,21 +23,21 @@ pub const ZigLibcOptions = struct {
     optimize: std.builtin.Mode,
 };
 
-fn relpath(comptime src_path: []const u8) []const u8 {
+fn relpath(comptime src_path: []const u8) std.Build.LazyPath {
     if (comptime std.fs.path.dirname(@src().file)) |dir|
-        return dir ++ std.fs.path.sep_str ++ src_path;
-    return src_path;
+        return .{ .path = dir ++ std.fs.path.sep_str ++ src_path };
+    return .{ .path = src_path };
 }
 
 /// Provides a _start symbol that will call C main
 pub fn addZigStart(
-    builder: *std.build.Builder,
+    builder: *build,
     target: std.zig.CrossTarget,
     optimize: anytype,
-) *std.build.LibExeObjStep {
+) *CompileStep {
     const lib = builder.addStaticLibrary(.{
         .name = "start",
-        .root_source_file = .{ .path = relpath("src" ++ std.fs.path.sep_str ++ "start.zig") },
+        .root_source_file = relpath("src" ++ std.fs.path.sep_str ++ "start.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -47,9 +47,9 @@ pub fn addZigStart(
     return lib;
 }
 
-// Returns ziglibc as a LibExeObjStep
+// Returns ziglibc as a CompileStep
 // Caller will also need to add the include path to get the C headers
-pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibExeObjStep {
+pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *CompileStep {
     const name = switch (opt.variant) {
         .only_std => "c-only-std",
         .only_posix => "c-only-posix",
@@ -71,13 +71,13 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     const lib = switch (opt.link) {
         .static => builder.addStaticLibrary(.{
             .name = name,
-            .root_source_file = .{ .path = index },
+            .root_source_file = index,
             .target = opt.target,
             .optimize = opt.optimize,
         }),
         .shared => builder.addSharedLibrary(.{
             .name = name,
-            .root_source_file = .{ .path = index },
+            .root_source_file = index,
             .target = opt.target,
             .optimize = opt.optimize,
             .version = switch (opt.variant) {
@@ -100,8 +100,8 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "cstd", include_cstd);
     if (include_cstd) {
-        lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "printf.c"), &c_flags);
-        lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "scanf.c"), &c_flags);
+        lib.addCSourceFile(.{ .file = relpath("src" ++ std.fs.path.sep_str ++ "printf.c"), .flags = &c_flags });
+        lib.addCSourceFile(.{ .file = relpath("src" ++ std.fs.path.sep_str ++ "scanf.c"), .flags = &c_flags });
         if (opt.target.getOsTag() == .linux) {
             lib.addAssemblyFile(relpath("src/linux/jmp.s"));
         }
@@ -112,7 +112,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "posix", include_posix);
     if (include_posix) {
-        lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "posix.c"), &c_flags);
+        lib.addCSourceFile(.{ .file = relpath("src" ++ std.fs.path.sep_str ++ "posix.c"), .flags = &c_flags });
     }
     const include_linux = switch (opt.variant) {
         .only_linux, .full => true,
