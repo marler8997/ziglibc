@@ -26,7 +26,7 @@ pub fn addAwk(
         .target = target,
         .optimize = optimize,
     });
-    const install = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe, .{});
     exe.step.dependOn(&repo.step);
     //    exe.step.dependOn(&config_step.step);
     const repo_path = repo.getPath(&exe.step);
@@ -45,9 +45,9 @@ pub fn addAwk(
         "-std=c11",
     });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
-    exe.addIncludePath("inc/gnu");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
+    exe.addIncludePath(.{ .path = "inc/gnu" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
