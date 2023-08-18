@@ -194,14 +194,14 @@ pub fn build(b: *std.build.Builder) void {
 
 // re-implements Build.installArtifact but also returns it
 fn installArtifact(b: *std.Build, artifact: anytype) *std.Build.Step.InstallArtifact {
-    const install = b.addInstallArtifact(artifact);
+    const install = b.addInstallArtifact(artifact, .{});
     b.getInstallStep().dependOn(&install.step);
     return install;
 }
 
 fn addPosix(artifact: *std.build.LibExeObjStep, zig_posix: *std.build.LibExeObjStep) void {
     artifact.linkLibrary(zig_posix);
-    artifact.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
+    artifact.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "posix" });
 }
 
 fn addTest(
@@ -219,8 +219,8 @@ fn addTest(
         .optimize = optimize,
     });
     exe.addCSourceFiles(&.{"test" ++ std.fs.path.sep_str ++ "expect.c"}, &[_][]const u8{});
-    exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-    exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
+    exe.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "libc" });
+    exe.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "posix" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
@@ -256,7 +256,7 @@ fn addLibcTest(
             .target = target,
             .optimize = optimize,
         });
-        lib.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+        lib.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "libc" });
         lib.step.dependOn(&libc_test_repo.step);
         libc_test_step.dependOn(&lib.step);
     }
@@ -276,9 +276,9 @@ fn addLibcTest(
         });
         exe.addCSourceFiles(common_src, &[_][]const u8{});
         exe.step.dependOn(&libc_test_repo.step);
-        exe.addIncludePath(libc_inc_path);
-        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
-        exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "posix");
+        exe.addIncludePath(.{ .path = libc_inc_path });
+        exe.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "libc" });
+        exe.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "posix" });
         exe.linkLibrary(libc_only_std_static);
         exe.linkLibrary(zig_start);
         exe.linkLibrary(libc_only_posix);
@@ -328,10 +328,10 @@ fn addTinyRegexCTests(
         exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
             "-std=c99",
         });
-        exe.addIncludePath(repo_path);
+        exe.addIncludePath(.{ .path = repo_path });
 
-        exe.addIncludePath("inc/libc");
-        exe.addIncludePath("inc/posix");
+        exe.addIncludePath(.{ .path = "inc/libc" });
+        exe.addIncludePath(.{ .path = "inc/posix" });
         exe.linkLibrary(libc_only_std_static);
         exe.linkLibrary(zig_start);
         exe.linkLibrary(zig_posix);
@@ -368,7 +368,7 @@ fn addLua(
         .optimize = optimize,
     });
     lua_exe.step.dependOn(&lua_repo.step);
-    const install = b.addInstallArtifact(lua_exe);
+    const install = b.addInstallArtifact(lua_exe, .{});
     // doesn't compile for windows for some reason
     if (target.getOs().tag != .windows) {
         b.getInstallStep().dependOn(&install.step);
@@ -392,13 +392,13 @@ fn addLua(
         "-std=c99",
     });
 
-    lua_exe.addIncludePath("inc" ++ std.fs.path.sep_str ++ "libc");
+    lua_exe.addIncludePath(.{ .path = "inc" ++ std.fs.path.sep_str ++ "libc" });
     lua_exe.linkLibrary(libc_only_std_static);
     lua_exe.linkLibrary(libc_only_posix);
     lua_exe.linkLibrary(zig_start);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
     if (target.getOs().tag == .windows) {
-        lua_exe.addIncludePath("inc/win32");
+        lua_exe.addIncludePath(.{ .path = "inc/win32" });
         lua_exe.linkSystemLibrary("ntdll");
         lua_exe.linkSystemLibrary("kernel32");
     }
@@ -462,9 +462,9 @@ fn addCmph(
         "-std=c11",
     });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
-    exe.addIncludePath("inc/gnu");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
+    exe.addIncludePath(.{ .path = "inc/gnu" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
@@ -538,8 +538,8 @@ fn addYacc(
         "-std=c90",
     });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
@@ -590,10 +590,10 @@ fn addYabfc(
         "-std=c99",
     });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
-    exe.addIncludePath("inc/linux");
-    exe.addIncludePath("inc/gnu");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
+    exe.addIncludePath(.{ .path = "inc/linux" });
+    exe.addIncludePath(.{ .path = "inc/gnu" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
@@ -631,7 +631,7 @@ fn addSecretGame(
         .target = target,
         .optimize = optimize,
     });
-    const install = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe, .{});
     exe.step.dependOn(&repo.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -645,10 +645,10 @@ fn addSecretGame(
         "-std=c90",
     });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
-    exe.addIncludePath("inc/linux");
-    exe.addIncludePath("inc/gnu");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
+    exe.addIncludePath(.{ .path = "inc/linux" });
+    exe.addIncludePath(.{ .path = "inc/gnu" });
     exe.linkLibrary(libc_only_std_static);
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);

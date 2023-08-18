@@ -100,10 +100,10 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "cstd", include_cstd);
     if (include_cstd) {
-        lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "printf.c"), &c_flags);
-        lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "scanf.c"), &c_flags);
+        lib.addCSourceFile(.{ .file = .{ .path = relpath("src" ++ std.fs.path.sep_str ++ "printf.c") }, .flags = &c_flags });
+        lib.addCSourceFile(.{ .file = .{ .path = relpath("src" ++ std.fs.path.sep_str ++ "scanf.c") }, .flags = &c_flags }); //, }); //,
         if (opt.target.getOsTag() == .linux) {
-            lib.addAssemblyFile(relpath("src/linux/jmp.s"));
+            lib.addAssemblyFile(.{ .path = relpath("src/linux/jmp.s") });
         }
     }
     const include_posix = switch (opt.variant) {
@@ -112,7 +112,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "posix", include_posix);
     if (include_posix) {
-        lib.addCSourceFile(relpath("src" ++ std.fs.path.sep_str ++ "posix.c"), &c_flags);
+        lib.addCSourceFile(.{ .file = .{ .path = relpath("src" ++ std.fs.path.sep_str ++ "posix.c") }, .flags = &c_flags });
     }
     const include_linux = switch (opt.variant) {
         .only_linux, .full => true,
@@ -120,8 +120,8 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "linux", include_linux);
     if (include_cstd or include_posix) {
-        lib.addIncludePath(relpath("inc" ++ std.fs.path.sep_str ++ "libc"));
-        lib.addIncludePath(relpath("inc" ++ std.fs.path.sep_str ++ "posix"));
+        lib.addIncludePath(.{ .path = relpath("inc" ++ std.fs.path.sep_str ++ "libc") });
+        lib.addIncludePath(.{ .path = relpath("inc" ++ std.fs.path.sep_str ++ "posix") });
     }
     const include_gnu = switch (opt.variant) {
         .only_gnu, .full => true,
@@ -129,7 +129,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *std.build.LibE
     };
     modules_options.addOption(bool, "gnu", include_gnu);
     if (include_gnu) {
-        lib.addIncludePath(relpath("inc" ++ std.fs.path.sep_str ++ "gnu"));
+        lib.addIncludePath(.{ .path = relpath("inc" ++ std.fs.path.sep_str ++ "gnu") });
     }
     return lib;
 }

@@ -151,7 +151,7 @@ pub fn add(
     //    b.pathJoin(&.{"include", "curses.head"}),
     //   .{ .subs = &.{ defs_sub } },
     //);
-    const install = b.addInstallArtifact(exe);
+    const install = b.addInstallArtifact(exe, .{});
     exe.step.dependOn(&prep.step);
     const repo_path = repo.getPath(&exe.step);
     var files = std.ArrayList([]const u8).init(b.allocator);
@@ -161,13 +161,13 @@ pub fn add(
     exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
         "-std=c99",
     });
-    exe.addIncludePath(b.pathJoin(&.{ repo_path, "include" }));
-    exe.addIncludePath(b.pathJoin(&.{ repo_path, "ncurses" }));
+    exe.addIncludePath(.{ .path = b.pathJoin(&.{ repo_path, "include" }) });
+    exe.addIncludePath(.{ .path = b.pathJoin(&.{ repo_path, "ncurses" }) });
 
-    exe.addIncludePath("inc/libc");
-    exe.addIncludePath("inc/posix");
-    exe.addIncludePath("inc/linux");
-    //exe.addIncludePath("inc/gnu");
+    exe.addIncludePath(.{ .path = "inc/libc" });
+    exe.addIncludePath(.{ .path = "inc/posix" });
+    exe.addIncludePath(.{ .path = "inc/linux" });
+    //exe.addIncludePath(.{.path="inc/gnu"});
     exe.linkLibrary(libc_only_std_static);
     //exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
