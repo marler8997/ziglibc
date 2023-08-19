@@ -112,11 +112,24 @@ export fn abort() callconv(.C) noreturn {
 
 // TODO: can name be null?
 // TODO: should we detect and do something different if there is a '=' in name?
-export fn getenv(name: [*:0]const u8) callconv(.C) ?[*:0]u8 {
-    trace.log("getenv {}", .{trace.fmtStr(name)});
-    return null; // not implemented
-    //const name_len = std.mem.len(name);
-    //var e: ?[*:0]u8 = environ;
+export fn getenv(key: [*:0]const u8) callconv(.C) ?[*:0]u8 {
+    trace.log("getenv {}", .{trace.fmtStr(key)});
+    switch (builtin.os.tag) {
+        // Windows not yet implemented
+        // Maybe `environ` should be populated on the first call of getenv?
+        .windows => return null,
+        else => {
+            // Looking at the Zig stdlib implementation of getenvZ, this should
+            // be null terminated
+            const ret = std.os.getenvZ(key);
+            if (ret) |env| {
+                // Why does libc return a mutable pointer with getenv?
+                return @constCast(env[0.. :0].ptr);
+            }
+
+            return null;
+        },
+    }
 }
 
 export fn system(string: ?[*:0]const u8) callconv(.C) c_int {
