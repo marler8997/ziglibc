@@ -86,6 +86,8 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *CompileStep {
             },
         }),
     };
+
+    lib.bundle_compiler_rt = true;
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
     lib.force_pic = true;
