@@ -2,13 +2,13 @@ const std = @import("std");
 const GitRepoStep = @import("../GitRepoStep.zig");
 
 const BusyboxPrepStep = struct {
-    step: std.build.Step,
-    builder: *std.build.Builder,
+    step: std.Build.Step,
+    builder: *std.Build,
     repo_path: []const u8,
-    pub fn create(b: *std.build.Builder, repo: *GitRepoStep) *BusyboxPrepStep {
-        var result = b.allocator.create(BusyboxPrepStep) catch unreachable;
+    pub fn create(b: *std.Build, repo: *GitRepoStep) *BusyboxPrepStep {
+        const result = b.allocator.create(BusyboxPrepStep) catch unreachable;
         result.* = BusyboxPrepStep{
-            .step = std.build.Step.init(.{
+            .step = std.Build.Step.init(.{
                 .id = .custom,
                 .name = "busybox prep",
                 .owner = b,
@@ -20,7 +20,7 @@ const BusyboxPrepStep = struct {
         result.*.step.dependOn(&repo.step);
         return result;
     }
-    fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
+    fn make(step: *std.Build.Step, progress: *std.Progress.Node) !void {
         _ = progress;
         const self = @fieldParentPtr(BusyboxPrepStep, "step", step);
         const b = self.builder;
@@ -35,12 +35,12 @@ const BusyboxPrepStep = struct {
 };
 
 pub fn add(
-    b: *std.build.Builder,
+    b: *std.Build,
     target: anytype,
     optimize: anytype,
-    libc_only_std_static: *std.build.LibExeObjStep,
-    zig_posix: *std.build.LibExeObjStep,
-) *std.build.LibExeObjStep {
+    libc_only_std_static: *std.Build.Step.Compile,
+    zig_posix: *std.Build.Step.Compile,
+) *std.Build.Step.Compile {
     const repo = GitRepoStep.create(b, .{
         .url = "https://git.busybox.net/busybox",
         .sha = "e512aeb0fb3c585948ae6517cfdf4a53cf99774d",
@@ -64,8 +64,11 @@ pub fn add(
     for (sources) |src| {
         files.append(b.pathJoin(&.{ repo_path, src })) catch unreachable;
     }
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
-        "-std=c99",
+    exe.addCSourceFiles(.{
+        .files = files.toOwnedSlice() catch unreachable,
+        .flags = &[_][]const u8{
+            "-std=c99",
+        },
     });
     exe.addIncludePath(.{ .path = b.pathJoin(&.{ repo_path, "include" }) });
 
@@ -76,7 +79,7 @@ pub fn add(
     //exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
-    if (target.getOs().tag == .windows) {
+    if (target.result.os.tag == .windows) {
         exe.linkSystemLibrary("ntdll");
         exe.linkSystemLibrary("kernel32");
     }

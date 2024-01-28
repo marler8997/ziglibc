@@ -457,7 +457,7 @@ fn strto(comptime T: type, str: [*:0]const u8, optional_endptr: ?*[*:0]const u8,
         break :blk 10;
     };
 
-    var digit_start = next;
+    const digit_start = next;
     var x: T = 0;
 
     while (true) : (next += 1) {

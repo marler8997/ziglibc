@@ -2,21 +2,21 @@ const std = @import("std");
 const GitRepoStep = @import("GitRepoStep.zig");
 
 pub fn addGnuMake(
-    b: *std.build.Builder,
+    b: *std.Build,
     target: anytype,
     optimize: anytype,
-    libc_only_std_static: *std.build.LibExeObjStep,
-    zig_start: *std.build.LibExeObjStep,
-    zig_posix: *std.build.LibExeObjStep,
-) *std.build.LibExeObjStep {
+    libc_only_std_static: *std.Build.Step.Compile,
+    zig_start: *std.Build.Step.Compile,
+    zig_posix: *std.Build.Step.Compile,
+) *std.Build.Step.Compile {
     const repo = GitRepoStep.create(b, .{
         .url = "https://git.savannah.gnu.org/git/make.git",
         .sha = "ed493f6c9116cc217b99c2cfa6a95f15803235a2",
         .branch = "4.4",
     });
 
-    const config_step = b.allocator.create(std.build.Step) catch unreachable;
-    config_step.* = std.build.Step.init(.{
+    const config_step = b.allocator.create(std.Build.Step) catch unreachable;
+    config_step.* = std.Build.Step.init(.{
         .id = .custom,
         .name = "configure GNU Make",
         .owner = b,
@@ -83,25 +83,28 @@ pub fn addGnuMake(
     }
 
     exe.addIncludePath(.{ .path = b.pathJoin(&.{ repo_path, "src" }) });
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
-        "-std=c99",
-        "-DHAVE_CONFIG_H",
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-        "-Wwrite-strings",
-        "-Wshadow",
-        "-Wdeclaration-after-statement",
-        "-Wbad-function-cast",
-        "-Wformat-security",
-        "-Wtype-limits",
-        "-Wunused-but-set-parameter",
-        "-Wpointer-arith",
-        "-Wignored-qualifiers",
-        // ignore unused parameter errors because the ATTRIBUTE define isn't working in makeint.h
-        "-Wno-unused-parameter",
-        "-Wno-dangling-else",
-        //"-Wlogical-op", "-Wformat-signedness", "-Wduplicated-cond",
+    exe.addCSourceFiles(.{
+        .files = files.toOwnedSlice() catch unreachable,
+        .flags = &[_][]const u8{
+            "-std=c99",
+            "-DHAVE_CONFIG_H",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-Wwrite-strings",
+            "-Wshadow",
+            "-Wdeclaration-after-statement",
+            "-Wbad-function-cast",
+            "-Wformat-security",
+            "-Wtype-limits",
+            "-Wunused-but-set-parameter",
+            "-Wpointer-arith",
+            "-Wignored-qualifiers",
+            // ignore unused parameter errors because the ATTRIBUTE define isn't working in makeint.h
+            "-Wno-unused-parameter",
+            "-Wno-dangling-else",
+            //"-Wlogical-op", "-Wformat-signedness", "-Wduplicated-cond",
+        },
     });
 
     exe.addIncludePath(.{ .path = "inc/libc" });
@@ -112,7 +115,7 @@ pub fn addGnuMake(
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
-    if (target.getOs().tag == .windows) {
+    if (target.result.os.tag == .windows) {
         exe.linkSystemLibrary("ntdll");
         exe.linkSystemLibrary("kernel32");
     }

@@ -2,8 +2,8 @@ const std = @import("std");
 const ProcessFileStep = @This();
 const filecheck = @import("filecheck.zig");
 
-step: std.build.Step,
-//builder: *std.build.Builder,
+step: std.Build.Step,
+//builder: *std.Build.Builder,
 in_filename: []const u8,
 out_filename: []const u8,
 subs: []const Sub,
@@ -13,15 +13,15 @@ pub const Sub = struct {
     new: []const u8,
 };
 
-pub fn create(b: *std.build.Builder, opt: struct {
+pub fn create(b: *std.Build, opt: struct {
     in_filename: []const u8,
     out_filename: []const u8,
     subs: []const Sub = &[_]Sub{},
 }) *ProcessFileStep {
-    var result = b.allocator.create(ProcessFileStep) catch unreachable;
+    const result = b.allocator.create(ProcessFileStep) catch unreachable;
     const name = std.fmt.allocPrint(b.allocator, "process file '{s}'", .{std.fs.path.basename(opt.in_filename)}) catch unreachable;
     result.* = ProcessFileStep{
-        .step = std.build.Step.init(.{
+        .step = std.Build.Step.init(.{
             .id = .custom,
             .name = name,
             .owner = b,
@@ -34,7 +34,7 @@ pub fn create(b: *std.build.Builder, opt: struct {
     return result;
 }
 
-fn make(step: *std.build.Step, progress: *std.Progress.Node) !void {
+fn make(step: *std.Build.Step, progress: *std.Progress.Node) !void {
     _ = progress;
     const self = @fieldParentPtr(ProcessFileStep, "step", step);
 
