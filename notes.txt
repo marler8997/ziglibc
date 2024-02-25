@@ -1,0 +1,38 @@
+NASM = nasm
+NASMFLAGS = -f elf64
+
+CC = zig cc
+INCLUDE_DIR = inc/
+CFLAGS = -Wall -Wextra -Werror -nostdlib -ffreestanding -I$(INCLUDE_DIR)
+SRC_DIR = src
+ASM_DIR = src/asm
+BUILD_DIR = build
+TEST_DIR = $(BUILD_DIR)/tests
+LIBRARY = zig-out/lib/libcguana.so.6
+DEPS_DIR = deps
+LIBC_DIR = $(abspath $(DEPS_DIR))/mylibc # Assuming mylibc is your custom libc directory
+
+# Recursively find all .c and .s files in their respective directories
+SRCS = $(shell find $(SRC_DIR) -type f -name '*.c')
+ASMS = $(shell find $(ASM_DIR) -type f -name '*.s')
+
+# Object files for both C and assembly sources
+COBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
+AOBJS = $(patsubst $(ASM_DIR)/%.s,$(BUILD_DIR)/%.o,$(ASMS))
+
+all: $(LIBRARY)
+
+
+test: $(LIBRARY)
+	@echo "Running tests..."
+	@mkdir -p $(TEST_DIR)
+	@for testfile in tests/*.c; do \
+		echo "Running $${testfile}"; \
+		$(CC) $(CFLAGS) -o  $(TEST_DIR)/$$(basename $${testfile} .c) $$testfile $(LIBRARY); \
+		./$(TEST_DIR)/$$(basename $${testfile} .c); \
+	done
+
+
+.PHONY: deps clean
+clean:
+	rm -rf $(BUILD_DIR) $(LIBRARY)

@@ -29,8 +29,8 @@ export fn __libc_start_main(
         .stage1 => fn (argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
         else => *const fn (argc: c_int, argv: [*:null]?[*:0]u8) callconv(.C) c_int,
     },
-    fini: fn () callconv(.C) void,
-    rtld_fini: fn () callconv(.C) void,
+    fini: *const fn () callconv(.C) void,
+    rtld_fini: *const fn () callconv(.C) void,
     stack_end: *anyopaque,
 ) callconv(.C) noreturn {
     _ = init;

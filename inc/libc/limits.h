@@ -1,7 +1,7 @@
 #ifndef _LIMITS_H
 #define _LIMITS_H
 
-#include "private/limits_and_float_shared.h"
+#include "../private/limits_and_float_shared.h"
 
 #if __STDC_VERSION__ >= 199901L
     /* assume 64-bit long long for now */

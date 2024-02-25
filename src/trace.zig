@@ -1,9 +1,11 @@
 const std = @import("std");
-const trace_options = @import("trace_options");
 
+// This is usefull for debugging, 1 = true 0 = false
+const ENABLE_TRACE = 1;
 pub fn log(comptime fmt: []const u8, args: anytype) void {
-    if (trace_options.enabled) {
-        std.log.scoped(.trace).info(fmt, args);
+    switch (ENABLE_TRACE) {
+        1 => std.log.scoped(.trace).info(fmt, args),
+        else => {},
     }
 }
 

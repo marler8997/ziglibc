@@ -1,9 +1,9 @@
 #ifndef _ELF_H
 #define _ELF_H
 
-#include "../libc/private/uint16_t.h"
-#include "../libc/private/uint32_t.h"
-#include "../libc/private/uint64_t.h"
+#include "../private/uint16_t.h"
+#include "../private/uint32_t.h"
+#include "../private/uint64_t.h"
 
 typedef uint32_t Elf32_Addr;
 typedef uint64_t Elf64_Addr;

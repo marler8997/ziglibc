@@ -1,7 +1,7 @@
 #ifndef _WINDOWS_H
 #define _WINDOWS_H
 
-#include "private/types.h"
+#include "../private/types.h"
 
 #include "winbase.h"
 #include "errhandlingapi.h"

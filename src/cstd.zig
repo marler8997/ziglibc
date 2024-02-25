@@ -457,7 +457,7 @@ fn strto(comptime T: type, str: [*:0]const u8, optional_endptr: ?*[*:0]const u8,
         break :blk 10;
     };
 
-    var digit_start = next;
+    const digit_start = next;
     var x: T = 0;
 
     while (true) : (next += 1) {
@@ -824,19 +824,20 @@ pub export fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) callconv(.C) ?
         return file;
     }
 
-    var flags: u32 = 0;
+    var flags: std.os.O = undefined;
+
     for (std.mem.span(mode)) |mode_char| {
         if (mode_char == 'r') {
-            flags |= std.os.O.RDONLY;
+            flags = .{ .ACCMODE = .RDWR };
         } else if (mode_char == 'w') {
-            flags |= std.os.O.WRONLY | std.os.O.CREAT | std.os.O.TRUNC;
+            flags = .{ .ACCMODE = .RDWR, .CREAT = true, .TRUNC = true };
         } else if (mode_char == 'b') {
             // not really sure what this is supposed to do yet, ignore it for now
         } else {
             std.debug.panic("unhandled open flag '{c}' (from {})", .{ mode_char, trace.fmtStr(mode) });
         }
     }
-    const fd = std.os.system.open(filename, flags, 0o666);
+    const fd = std.os.system.open(std.mem.span(filename), flags, 0o666);
     switch (std.os.errno(fd)) {
         .SUCCESS => {},
         else => |e| {

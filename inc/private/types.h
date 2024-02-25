@@ -1,7 +1,7 @@
 #ifndef _WIN32_PRIVATE_TYPES_H
 #define _WIN32_PRIVATE_TYPES_H
 
-#include "../../libc/private/int32_t.h"
+#include "/private/int32_t.h"
 
 #define _nullterminated
 

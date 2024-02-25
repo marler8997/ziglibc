@@ -14,10 +14,10 @@ void (*signal(int sig, void (*func)(int)))(int);
 
 /* TODO: these are posix definitions for the signal.h libc header */
 #if 1
-    #include "private/restrict.h"
-    #include "../posix/private/sigset_t.h"
-    #include "../posix/private/pid_t.h"
-    #include "../posix/private/uid_t.h"
+    #include "../private/restrict.h"
+    #include "../private/sigset_t.h"
+    #include "../private/pid_t.h"
+    #include "../private/uid_t.h"
 
     #define SIGALRM 14
     union sigval {

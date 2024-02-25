@@ -1,11 +1,11 @@
 #ifndef _SYS_SOCKET_H
 #define _SYS_SOCKET_H
 
-#include "../../libc/private/restrict.h"
-#include "../../libc/private/size_t.h"
-#include "../private/ssize_t.h"
-#include "../private/socklen_t.h"
-#include "../private/sockaddr.h"
+#include "../../private/restrict.h"
+#include "../../private/size_t.h"
+#include "../../private/ssize_t.h"
+#include "../../private/socklen_t.h"
+#include "../../private/sockaddr.h"
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2

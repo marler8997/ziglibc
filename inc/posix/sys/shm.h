@@ -1,10 +1,10 @@
 #ifndef _SYS_SHM_H
 #define _SYS_SHM_H
 
-#include "../../libc/private/size_t.h"
-#include "../../libc//private/time_t.h"
-#include "../private/pid_t.h"
-#include "../private/ipc_perm.h"
+#include "../../private/size_t.h"
+#include "../../private/time_t.h"
+#include "../../private/pid_t.h"
+#include "../../private/ipc_perm.h"
 
 typedef unsigned short shmatt_t;
 

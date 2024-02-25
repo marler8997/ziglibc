@@ -1,7 +1,7 @@
 #ifndef _ARGP_H
 #define _ARGP_H
 
-#include "../libc/private/restrict.h"
+#include "../private/restrict.h"
 
 /* according to the GNU headers, error_t may be available in errno.h depending on the OS
    for now we'll just define it here */

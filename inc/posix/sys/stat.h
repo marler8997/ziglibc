@@ -1,18 +1,18 @@
 #ifndef _SYS_STAT_H
 #define _SYS_STAT_H
 
-#include "../../libc/private/restrict.h"
-#include "../../libc/private/time_t.h"
+#include "../../private/restrict.h"
+#include "../../private/time_t.h"
 
-#include "../private/dev_t.h"
-#include "../private/ino_t.h"
-#include "../private/mode_t.h"
-#include "../private/nlink_t.h"
-#include "../private/uid_t.h"
-#include "../private/gid_t.h"
-#include "../private/off_t.h"
-#include "../private/blksize_t.h"
-#include "../private/blkcnt_t.h"
+#include "../../private/dev_t.h"
+#include "../../private/ino_t.h"
+#include "../../private/mode_t.h"
+#include "../../private/nlink_t.h"
+#include "../../private/uid_t.h"
+#include "../../private/gid_t.h"
+#include "../../private/off_t.h"
+#include "../../private/blksize_t.h"
+#include "../../private/blkcnt_t.h"
 
 #define S_IXUSR 0100
 #define S_IWUSR 0200

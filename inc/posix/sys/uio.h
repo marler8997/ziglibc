@@ -1,8 +1,8 @@
 #ifndef _SYS_UIO_H
 #define _SYS_UIO_H
 
-#include "../../libc/private/size_t.h"
-#include "../private/ssize_t.h"
+#include "../../private/size_t.h"
+#include "../../private/ssize_t.h"
 
 struct iovec {
   void *iov_base;

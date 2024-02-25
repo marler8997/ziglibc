@@ -2,13 +2,13 @@ const std = @import("std");
 const GitRepoStep = @import("GitRepoStep.zig");
 
 pub fn addAwk(
-    b: *std.build.Builder,
+    b: *std.Build,
     target: anytype,
     optimize: anytype,
-    libc_only_std_static: *std.build.LibExeObjStep,
-    zig_start: *std.build.LibExeObjStep,
-    zig_posix: *std.build.LibExeObjStep,
-) *std.build.LibExeObjStep {
+    libc_only_std_static: *std.Build.Step.Compile,
+    zig_start: *std.Build.Step.Compile,
+    zig_posix: *std.Build.Step.Compile,
+) *std.Build.Step.Compile {
     const repo = GitRepoStep.create(b, .{
         .url = "https://github.com/onetrueawk/awk",
         .sha = "9e248c317b88470fc86aa7c988919dc49452c88c",
@@ -41,8 +41,9 @@ pub fn addAwk(
         files.append(b.pathJoin(&.{ repo_path, "src", src })) catch unreachable;
     }
 
-    exe.addCSourceFiles(files.toOwnedSlice() catch unreachable, &[_][]const u8{
-        "-std=c11",
+    exe.addCSourceFiles(.{
+        .files = files.toOwnedSlice() catch unreachable,
+        .flags = &[_][]const u8{"-std=c11"},
     });
 
     exe.addIncludePath(.{ .path = "inc/libc" });
@@ -52,7 +53,7 @@ pub fn addAwk(
     exe.linkLibrary(zig_start);
     exe.linkLibrary(zig_posix);
     // TODO: should libc_only_std_static and zig_start be able to add library dependencies?
-    if (target.getOs().tag == .windows) {
+    if (target.result.os.tag == .windows) {
         exe.linkSystemLibrary("ntdll");
         exe.linkSystemLibrary("kernel32");
     }

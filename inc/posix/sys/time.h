@@ -1,11 +1,11 @@
 #ifndef _SYS_TIME_H
 #define _SYS_TIME_H
 
-#include "../private/suseconds_t.h"
-#include "../private/fd_set.h"
+#include "../../private/suseconds_t.h"
+#include "../../private/fd_set.h"
 
-#include "../../libc/private/time_t.h"
-#include "../private/timeval.h"
+#include "../../private/time_t.h"
+#include "../../private/timeval.h"
 
 #define ITIMER_REAL 0
 #define ITIMER_VIRTUAL 1

@@ -1,8 +1,8 @@
 #ifndef _STRING_H
 #define _STRING_H
 
-#include "private/null.h"
-#include "private/size_t.h"
+#include "../private/null.h"
+#include "../private/size_t.h"
 
 void *memcpy(void *s1, const void *s2, size_t n);
 void *memmove(void *s1, const void *s2, size_t n);
