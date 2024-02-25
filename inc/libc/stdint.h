@@ -5,15 +5,15 @@
     #error stdint.h requires at least c99 I think
 #endif
 
-#include "private/int8_t.h"
-#include "private/uint8_t.h"
-#include "private/int16_t.h"
-#include "private/uint16_t.h"
-#include "private/int32_t.h"
-#include "private/uint32_t.h"
-#include "private/int64_t.h"
-#include "private/uint64_t.h"
-#include "private/_zig_isize.h"
+#include "../private/int8_t.h"
+#include "../private/uint8_t.h"
+#include "../private/int16_t.h"
+#include "../private/uint16_t.h"
+#include "../private/int32_t.h"
+#include "../private/uint32_t.h"
+#include "../private/int64_t.h"
+#include "../private/uint64_t.h"
+#include "../private/_zig_isize.h"
 
 typedef int8_t int_least8_t;
 typedef int16_t int_least16_t;

@@ -1,10 +1,10 @@
 #ifndef _TIME_H
 #define _TIME_H
 
-#include "private/null.h"
-#include "private/size_t.h"
-#include "private/time_t.h"
-#include "private/timespec.h"
+#include "../private/null.h"
+#include "../private/size_t.h"
+#include "../private/time_t.h"
+#include "../private/timespec.h"
 
 // CLK_TCK
 typedef long clock_t;

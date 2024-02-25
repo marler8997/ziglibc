@@ -1,7 +1,7 @@
 #ifndef _NETDB_H
 #define _NETDB_H
 
-#include "private/socklen_t.h"
+#include "../private/socklen_t.h"
 
 struct hostent {
   char *h_name;

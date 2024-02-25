@@ -1,7 +1,7 @@
 #ifndef _LOCALE_H
 #define _LOCALE_H
 
-#include "private/null.h"
+#include "../private/null.h"
 
 #define LC_ALL 6
 #define LC_COLLATE 3

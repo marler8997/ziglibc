@@ -19,7 +19,7 @@ pub const ZigLibcOptions = struct {
     link: LinkKind,
     start: Start,
     trace: bool,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
 };
 
@@ -32,7 +32,7 @@ fn relpath(comptime src_path: []const u8) std.Build.LazyPath {
 /// Provides a _start symbol that will call C main
 pub fn addZigStart(
     builder: *build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: anytype,
 ) *CompileStep {
     const lib = builder.addStaticLibrary(.{
@@ -40,16 +40,17 @@ pub fn addZigStart(
         .root_source_file = relpath("src" ++ std.fs.path.sep_str ++ "start.zig"),
         .target = target,
         .optimize = optimize,
+        .strip = true,
     });
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
-    lib.force_pic = true;
+    lib.root_module.pic = true;
     return lib;
 }
 
 // Returns ziglibc as a CompileStep
 // Caller will also need to add the include path to get the C headers
-pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *CompileStep {
+pub fn addLibc(builder: *std.Build, opt: ZigLibcOptions) *CompileStep {
     const name = switch (opt.variant) {
         .only_std => "c-only-std",
         .only_posix => "c-only-posix",
@@ -74,6 +75,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *CompileStep {
             .root_source_file = index,
             .target = opt.target,
             .optimize = opt.optimize,
+            .strip = true,
         }),
         .shared => builder.addSharedLibrary(.{
             .name = name,
@@ -84,13 +86,15 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *CompileStep {
                 .full => .{ .major = 6, .minor = 0, .patch = 0 },
                 else => null,
             },
+            .strip = true,
         }),
     };
     // TODO: not sure if this is reallly needed or not, but it shouldn't hurt
     //       anything except performance to enable it
-    lib.force_pic = true;
-    lib.addOptions("modules", modules_options);
-    lib.addOptions("trace_options", trace_options);
+    lib.bundle_compiler_rt = true;
+    lib.root_module.pic = true;
+    lib.root_module.addOptions("modules", modules_options);
+    lib.root_module.addOptions("trace_options", trace_options);
     const c_flags = [_][]const u8{
         "-std=c11",
     };
@@ -102,7 +106,7 @@ pub fn addLibc(builder: *std.build.Builder, opt: ZigLibcOptions) *CompileStep {
     if (include_cstd) {
         lib.addCSourceFile(.{ .file = relpath("src" ++ std.fs.path.sep_str ++ "printf.c"), .flags = &c_flags });
         lib.addCSourceFile(.{ .file = relpath("src" ++ std.fs.path.sep_str ++ "scanf.c"), .flags = &c_flags });
-        if (opt.target.getOsTag() == .linux) {
+        if (opt.target.result.os.tag == .linux) {
             lib.addAssemblyFile(relpath("src/linux/jmp.s"));
         }
     }

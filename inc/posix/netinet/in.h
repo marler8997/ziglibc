@@ -1,10 +1,10 @@
 #ifndef _NETINET_IN_H
 #define _NETINET_IN_H
 
-#include "../../libc/private/uint8_t.h"
-#include "../../libc/private/uint32_t.h"
-#include "../private/sockaddr.h"
-#include "../private/in_addr_t.h"
+#include "../../private/uint8_t.h"
+#include "../../private/uint32_t.h"
+#include "../../private/sockaddr.h"
+#include "../../private/in_addr_t.h"
 
 #define IPPORT_RESERVED 1024
 #define IPPORT_USERRESERVED 5000

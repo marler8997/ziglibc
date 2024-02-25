@@ -6,9 +6,9 @@
 // TODO: look into this value more
 #define RAND_MAX 65535
 
-#include "private/null.h"
-#include "private/size_t.h"
-#include "private/wchar_t.h"
+#include "../private/null.h"
+#include "../private/size_t.h"
+#include "../private/wchar_t.h"
 
 typedef struct { int quot, rem; } div_t;
 typedef struct { long quot, rem; } ldiv_t;

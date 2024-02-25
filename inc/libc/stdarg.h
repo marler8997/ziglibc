@@ -1,7 +1,7 @@
 #ifndef _STDARG_H
 #define _STDARG_H
 
-#include "private/valist.h"
+#include "../private/valist.h"
 
 #define va_start(ap, parmN) __builtin_va_start(ap, parmN)
 #define va_arg(ap, type) __builtin_va_arg(ap, type)

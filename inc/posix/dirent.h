@@ -1,7 +1,7 @@
 #ifndef _DIRENT_H
 #define _DIRENT_H
 
-#include "private/ino_t.h"
+#include "../private/ino_t.h"
 
 typedef struct DIR DIR;
 struct dirent {

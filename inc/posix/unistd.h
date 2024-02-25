@@ -1,10 +1,10 @@
 #ifndef _UNISTD_H
 #define _UNISTD_H
 
-#include "../libc/private/size_t.h"
-#include "private/getopt.h"
-#include "private/ssize_t.h"
-#include "private/off_t.h"
+#include "../private/size_t.h"
+#include "../private/getopt.h"
+#include "../private/ssize_t.h"
+#include "../private/off_t.h"
 
 #define X_OK 1
 #define R_OK 4

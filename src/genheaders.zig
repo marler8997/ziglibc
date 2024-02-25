@@ -92,7 +92,7 @@ fn parseDefinition(
             return ReportedError.Reported;
         };
         var remaining_line = def_line_original;
-        var abi_type = peel(&remaining_line) orelse {
+        const abi_type = peel(&remaining_line) orelse {
             error_reporter.report(line_offset, "definition line is empty? '{s}'", .{def_line_original});
             return ReportedError.Reported;
         };
@@ -128,7 +128,7 @@ fn parseDefinition(
         line_offset += 1;
         const line_original = line_it.next() orelse break;
         var remaining_line = line_original;
-        var directive = peel(&remaining_line) orelse break;
+        const directive = peel(&remaining_line) orelse break;
         if (std.mem.eql(u8, directive, "header")) {
             const name = peel(&remaining_line) orelse {
                 error_reporter.report(line_offset, "'header' requires a name", .{});

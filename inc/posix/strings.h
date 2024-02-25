@@ -1,7 +1,7 @@
 #ifndef _STRINGS_H
 #define _STRINGS_H
 
-#include "private/locale_t.h"
+#include "../private/locale_t.h"
 
 int strcasecmp(const char *s1, const char *s2);
 int strcasecmp_l(const char *s1, const char *s2,

@@ -4,7 +4,7 @@
 /* GNU Make getopt.h checks for this define and will change the definition of getopt depending on it */
 #define __GNU_LIBRARY__
 
-#include "../posix/private/getopt.h"
+#include "../private/getopt.h"
 
 struct option {
   const char *name;

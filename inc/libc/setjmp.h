@@ -1,7 +1,7 @@
 #ifndef _SETJMP_H
 #define _SETJMP_H
 
-#include "private/noreturn.h"
+#include "../private/noreturn.h"
 
 #ifdef _WIN32
     typedef struct { void *stuff[40]; } jmp_buf;

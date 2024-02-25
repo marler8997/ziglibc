@@ -1,9 +1,9 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
-#include "private/null.h"
-#include "private/size_t.h"
-#include "private/valist.h"
+#include "../private/null.h"
+#include "../private/size_t.h"
+#include "../private/valist.h"
 
 #define _IOFBF 0
 #define _IOLBF 1

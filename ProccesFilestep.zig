@@ -18,7 +18,7 @@ pub fn create(b: *std.build.Builder, opt: struct {
     out_filename: []const u8,
     subs: []const Sub = &[_]Sub{},
 }) *ProcessFileStep {
-    var result = b.allocator.create(ProcessFileStep) catch unreachable;
+    const result = b.allocator.create(ProcessFileStep) catch unreachable;
     const name = std.fmt.allocPrint(b.allocator, "process file '{s}'", .{std.fs.path.basename(opt.in_filename)}) catch unreachable;
     result.* = ProcessFileStep{
         .step = std.build.Step.init(.{

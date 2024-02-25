@@ -11,8 +11,6 @@ const c = @cImport({
     @cInclude("signal.h");
     @cInclude("termios.h");
     @cInclude("sys/time.h");
-    @cInclude("sys/stat.h");
-    @cInclude("sys/select.h");
 });
 
 const cstd = struct {
@@ -147,7 +145,9 @@ export fn mkostemp(template: [*:0]u8, suffixlen: c_int, flags: c_int) callconv(.
     var attempt: u32 = 0;
     while (true) : (attempt += 1) {
         randomizeTempFilename(rand_part);
-        const fd = os.system.open(template, @as(u32, @intCast(flags | os.O.RDWR | os.O.CREAT | os.O.EXCL)), 0o600);
+        _ = flags;
+        // TODO: Make use of flags
+        const fd = os.system.open(template, .{ .ACCMODE = .RDWR, .CREAT = true, .CLOEXEC = true }, 0o600);
         switch (os.errno(fd)) {
             .SUCCESS => return @as(c_int, @intCast(fd)),
             else => |e| {
@@ -160,7 +160,6 @@ export fn mkostemp(template: [*:0]u8, suffixlen: c_int, flags: c_int) callconv(.
         }
     }
 }
-
 const filename_char_set =
     "+,-.0123456789=@ABCDEFGHIJKLMNOPQRSTUVWXYZ" ++
     "_abcdefghijklmnopqrstuvwxyz";
@@ -335,27 +334,10 @@ export fn sigaction(sig: c_int, act: *const c.struct_sigaction, oact: *c.struct_
 // --------------------------------------------------------------------------------
 // sys/stat.h
 // --------------------------------------------------------------------------------
-export fn chmod(path: [*:0]const u8, mode: c.mode_t) callconv(.C) c_int {
+export fn chmod(path: [*:0]const u8, mode: c_uint) callconv(.C) c_int {
     trace.log("chmod '{s}' mode=0x{x}", .{ path, mode });
     @panic("chmod not implemented");
 }
-
-export fn fstat(fd: c_int, buf: *c.struct_stat) c_int {
-    _ = fd;
-    _ = buf;
-    @panic("fstat not implemented");
-}
-
-export fn umask(mode: c.mode_t) callconv(.C) c.mode_t {
-    trace.log("umask 0x{x}", .{mode});
-    const old_mode = os.linux.syscall1(.umask, @as(usize, @intCast(mode)));
-    switch (os.errno(old_mode)) {
-        .SUCCESS => {},
-        else => |e| std.debug.panic("umask syscall should never fail but got '{s}'", .{@tagName(e)}),
-    }
-    return @as(c.mode_t, @intCast(old_mode));
-}
-
 // --------------------------------------------------------------------------------
 // libgen
 // --------------------------------------------------------------------------------

@@ -3,10 +3,10 @@
 
 // According to POSIX.1-2001
 #if 1
-    #include "../../libc/private/timespec.h"
-    #include "../private/fd_set.h"
-    #include "../private/sigset_t.h"
-    #include "../private/timeval.h"
+    #include "../../private/timespec.h"
+    #include "../../private/fd_set.h"
+    #include "../../private/sigset_t.h"
+    #include "../../private/timeval.h"
 
     void FD_CLR(int fd, fd_set *fdset);
     int FD_ISSET(int fd, fd_set *fdset);
